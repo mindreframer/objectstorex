@@ -16,14 +16,14 @@ echo "✓ Elixir tests passed"
 echo ""
 
 echo "Step 2: Running Rust tests..."
-cd native/loro_nif
+cd native/objectstorex
 cargo test --quiet
 cd "$PROJECT_ROOT"
 echo "✓ Rust tests passed"
 echo ""
 
 echo "Step 3: Running cargo clippy..."
-cd native/loro_nif
+cd native/objectstorex
 cargo clippy --quiet
 cd "$PROJECT_ROOT"
 echo "✓ Clippy passed"

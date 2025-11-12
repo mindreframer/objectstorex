@@ -1,0 +1,21 @@
+defmodule ObjectStoreX.Native do
+  @moduledoc false
+  # NIF module - functions are implemented in Rust
+
+  use Rustler, otp_app: :objectstorex, crate: "objectstorex"
+
+  # Provider builders
+  def new_s3(_bucket, _region, _access_key_id, _secret_access_key), do: :erlang.nif_error(:nif_not_loaded)
+  def new_azure(_account, _container, _access_key), do: :erlang.nif_error(:nif_not_loaded)
+  def new_gcs(_bucket, _service_account_key), do: :erlang.nif_error(:nif_not_loaded)
+  def new_local(_path), do: :erlang.nif_error(:nif_not_loaded)
+  def new_memory(), do: :erlang.nif_error(:nif_not_loaded)
+
+  # Operations
+  def put(_store, _path, _data), do: :erlang.nif_error(:nif_not_loaded)
+  def get(_store, _path), do: :erlang.nif_error(:nif_not_loaded)
+  def delete(_store, _path), do: :erlang.nif_error(:nif_not_loaded)
+  def head(_store, _path), do: :erlang.nif_error(:nif_not_loaded)
+  def copy(_store, _from, _to), do: :erlang.nif_error(:nif_not_loaded)
+  def rename(_store, _from, _to), do: :erlang.nif_error(:nif_not_loaded)
+end
