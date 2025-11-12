@@ -1,9 +1,9 @@
-use rustler::{NifResult, ResourceArc, Binary, Env, Term, OwnedBinary, Encoder};
-use object_store::{path::Path, PutPayload};
-use crate::store::StoreWrapper;
 use crate::atoms;
 use crate::errors::map_error;
+use crate::store::StoreWrapper;
 use crate::RUNTIME;
+use object_store::{path::Path, PutPayload};
+use rustler::{Binary, Encoder, Env, NifResult, OwnedBinary, ResourceArc, Term};
 
 /// Upload an object to storage
 #[rustler::nif(schedule = "DirtyCpu")]
@@ -15,9 +15,7 @@ pub fn put<'a>(
 ) -> NifResult<Term<'a>> {
     let payload = PutPayload::from(data.as_slice().to_vec());
 
-    match RUNTIME.block_on(async {
-        store.inner.put(&Path::from(path), payload).await
-    }) {
+    match RUNTIME.block_on(async { store.inner.put(&Path::from(path), payload).await }) {
         Ok(_) => Ok(atoms::ok().to_term(env)),
         Err(e) => Ok(map_error(e).to_term(env)),
     }
@@ -30,23 +28,17 @@ pub fn get<'a>(
     store: ResourceArc<StoreWrapper>,
     path: String,
 ) -> NifResult<Term<'a>> {
-    let result = RUNTIME.block_on(async {
-        store.inner.get(&Path::from(path)).await
-    });
+    let result = RUNTIME.block_on(async { store.inner.get(&Path::from(path)).await });
 
     match result {
-        Ok(get_result) => {
-            match RUNTIME.block_on(async {
-                get_result.bytes().await
-            }) {
-                Ok(bytes) => {
-                    let mut binary = OwnedBinary::new(bytes.len()).unwrap();
-                    binary.as_mut_slice().copy_from_slice(&bytes);
-                    Ok(binary.release(env).to_term(env))
-                }
-                Err(e) => Ok(map_error(e).to_term(env)),
+        Ok(get_result) => match RUNTIME.block_on(async { get_result.bytes().await }) {
+            Ok(bytes) => {
+                let mut binary = OwnedBinary::new(bytes.len()).unwrap();
+                binary.as_mut_slice().copy_from_slice(&bytes);
+                Ok(binary.release(env).to_term(env))
             }
-        }
+            Err(e) => Ok(map_error(e).to_term(env)),
+        },
         Err(e) => Ok(map_error(e).to_term(env)),
     }
 }
@@ -58,9 +50,7 @@ pub fn delete<'a>(
     store: ResourceArc<StoreWrapper>,
     path: String,
 ) -> NifResult<Term<'a>> {
-    match RUNTIME.block_on(async {
-        store.inner.delete(&Path::from(path)).await
-    }) {
+    match RUNTIME.block_on(async { store.inner.delete(&Path::from(path)).await }) {
         Ok(_) => Ok(atoms::ok().to_term(env)),
         Err(e) => Ok(map_error(e).to_term(env)),
     }
@@ -73,32 +63,50 @@ pub fn head<'a>(
     store: ResourceArc<StoreWrapper>,
     path: String,
 ) -> NifResult<Term<'a>> {
-    let meta = RUNTIME.block_on(async {
-        store.inner.head(&Path::from(path)).await
-    });
+    let meta = RUNTIME.block_on(async { store.inner.head(&Path::from(path)).await });
 
     match meta {
         Ok(meta) => {
             // Convert ObjectMeta to Elixir map
             let map = rustler::types::map::map_new(env);
-            let map = map.map_put(
-                rustler::types::atom::Atom::from_str(env, "location").unwrap().to_term(env),
-                meta.location.to_string().encode(env)
-            ).ok().unwrap();
-            let map = map.map_put(
-                rustler::types::atom::Atom::from_str(env, "size").unwrap().to_term(env),
-                meta.size.encode(env)
-            ).ok().unwrap();
-            let map = map.map_put(
-                rustler::types::atom::Atom::from_str(env, "last_modified").unwrap().to_term(env),
-                meta.last_modified.to_string().encode(env)
-            ).ok().unwrap();
+            let map = map
+                .map_put(
+                    rustler::types::atom::Atom::from_str(env, "location")
+                        .unwrap()
+                        .to_term(env),
+                    meta.location.to_string().encode(env),
+                )
+                .ok()
+                .unwrap();
+            let map = map
+                .map_put(
+                    rustler::types::atom::Atom::from_str(env, "size")
+                        .unwrap()
+                        .to_term(env),
+                    meta.size.encode(env),
+                )
+                .ok()
+                .unwrap();
+            let map = map
+                .map_put(
+                    rustler::types::atom::Atom::from_str(env, "last_modified")
+                        .unwrap()
+                        .to_term(env),
+                    meta.last_modified.to_string().encode(env),
+                )
+                .ok()
+                .unwrap();
 
             if let Some(etag) = meta.e_tag {
-                let map = map.map_put(
-                    rustler::types::atom::Atom::from_str(env, "etag").unwrap().to_term(env),
-                    etag.encode(env)
-                ).ok().unwrap();
+                let map = map
+                    .map_put(
+                        rustler::types::atom::Atom::from_str(env, "etag")
+                            .unwrap()
+                            .to_term(env),
+                        etag.encode(env),
+                    )
+                    .ok()
+                    .unwrap();
                 Ok(map)
             } else {
                 Ok(map)
@@ -116,9 +124,7 @@ pub fn copy<'a>(
     from: String,
     to: String,
 ) -> NifResult<Term<'a>> {
-    match RUNTIME.block_on(async {
-        store.inner.copy(&Path::from(from), &Path::from(to)).await
-    }) {
+    match RUNTIME.block_on(async { store.inner.copy(&Path::from(from), &Path::from(to)).await }) {
         Ok(_) => Ok(atoms::ok().to_term(env)),
         Err(e) => Ok(map_error(e).to_term(env)),
     }
@@ -132,9 +138,7 @@ pub fn rename<'a>(
     from: String,
     to: String,
 ) -> NifResult<Term<'a>> {
-    match RUNTIME.block_on(async {
-        store.inner.rename(&Path::from(from), &Path::from(to)).await
-    }) {
+    match RUNTIME.block_on(async { store.inner.rename(&Path::from(from), &Path::from(to)).await }) {
         Ok(_) => Ok(atoms::ok().to_term(env)),
         Err(e) => Ok(map_error(e).to_term(env)),
     }

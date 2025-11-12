@@ -1,13 +1,10 @@
-use std::sync::Arc;
-use rustler::{ResourceArc, NifResult};
-use object_store::{
-    aws::AmazonS3Builder,
-    azure::MicrosoftAzureBuilder,
-    gcp::GoogleCloudStorageBuilder,
-    local::LocalFileSystem,
-    memory::InMemory,
-};
 use crate::store::StoreWrapper;
+use object_store::{
+    aws::AmazonS3Builder, azure::MicrosoftAzureBuilder, gcp::GoogleCloudStorageBuilder,
+    local::LocalFileSystem, memory::InMemory,
+};
+use rustler::{NifResult, ResourceArc};
+use std::sync::Arc;
 
 /// Create a new S3 object store
 #[rustler::nif]
@@ -29,7 +26,8 @@ pub fn new_s3(
         builder = builder.with_secret_access_key(secret);
     }
 
-    let store = builder.build()
+    let store = builder
+        .build()
         .map_err(|e| rustler::Error::Term(Box::new(format!("S3 build error: {}", e))))?;
 
     Ok(ResourceArc::new(StoreWrapper::new(Arc::new(store))))
@@ -50,7 +48,8 @@ pub fn new_azure(
         builder = builder.with_access_key(key);
     }
 
-    let store = builder.build()
+    let store = builder
+        .build()
         .map_err(|e| rustler::Error::Term(Box::new(format!("Azure build error: {}", e))))?;
 
     Ok(ResourceArc::new(StoreWrapper::new(Arc::new(store))))
@@ -62,14 +61,14 @@ pub fn new_gcs(
     bucket: String,
     service_account_key: Option<String>,
 ) -> NifResult<ResourceArc<StoreWrapper>> {
-    let mut builder = GoogleCloudStorageBuilder::new()
-        .with_bucket_name(bucket);
+    let mut builder = GoogleCloudStorageBuilder::new().with_bucket_name(bucket);
 
     if let Some(key) = service_account_key {
         builder = builder.with_service_account_key(key);
     }
 
-    let store = builder.build()
+    let store = builder
+        .build()
         .map_err(|e| rustler::Error::Term(Box::new(format!("GCS build error: {}", e))))?;
 
     Ok(ResourceArc::new(StoreWrapper::new(Arc::new(store))))

@@ -48,11 +48,11 @@ defmodule ObjectStoreX do
   @type path :: String.t()
   @type provider :: :s3 | :azure | :gcs | :local | :memory
   @type metadata :: %{
-    location: String.t(),
-    last_modified: String.t(),
-    size: non_neg_integer(),
-    etag: String.t() | nil
-  }
+          location: String.t(),
+          last_modified: String.t(),
+          size: non_neg_integer(),
+          etag: String.t() | nil
+        }
 
   @doc """
   Create a new storage provider.

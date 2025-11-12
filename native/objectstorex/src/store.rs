@@ -1,6 +1,6 @@
-use std::sync::Arc;
-use std::panic::RefUnwindSafe;
 use object_store::DynObjectStore;
+use std::panic::RefUnwindSafe;
+use std::sync::Arc;
 
 /// Wrapper around the object_store DynObjectStore trait object
 /// This is registered as a Rustler resource to be passed between Elixir and Rust

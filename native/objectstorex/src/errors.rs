@@ -1,6 +1,6 @@
+use crate::atoms;
 use object_store::Error as ObjectStoreError;
 use rustler::Atom;
-use crate::atoms;
 
 /// Map object_store errors to Elixir atoms for consistent error handling
 ///

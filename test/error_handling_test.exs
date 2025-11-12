@@ -122,7 +122,9 @@ defmodule ObjectStoreX.ErrorHandlingTest do
   describe "Error handling with local filesystem provider" do
     setup do
       # Create a temporary directory for testing
-      tmp_dir = System.tmp_dir!() |> Path.join("objectstorex_error_test_#{:rand.uniform(999_999)}")
+      tmp_dir =
+        System.tmp_dir!() |> Path.join("objectstorex_error_test_#{:rand.uniform(999_999)}")
+
       File.mkdir_p!(tmp_dir)
 
       on_exit(fn ->
