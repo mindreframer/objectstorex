@@ -15,6 +15,7 @@ defmodule ObjectStoreX.Native do
 
   # Operations
   def put(_store, _path, _data), do: :erlang.nif_error(:nif_not_loaded)
+  def put_with_mode(_store, _path, _data, _mode), do: :erlang.nif_error(:nif_not_loaded)
   def get(_store, _path), do: :erlang.nif_error(:nif_not_loaded)
   def delete(_store, _path), do: :erlang.nif_error(:nif_not_loaded)
   def head(_store, _path), do: :erlang.nif_error(:nif_not_loaded)

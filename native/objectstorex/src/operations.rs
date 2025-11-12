@@ -1,8 +1,11 @@
 use crate::atoms;
 use crate::errors::map_error;
 use crate::store::StoreWrapper;
+use crate::types::PutModeNif;
 use crate::RUNTIME;
-use object_store::{path::Path, PutPayload};
+use object_store::{
+    path::Path, PutMode, PutOptions, PutPayload, UpdateVersion as ObjectStoreUpdateVersion,
+};
 use rustler::{Binary, Encoder, Env, NifResult, OwnedBinary, ResourceArc, Term};
 
 /// Upload an object to storage
@@ -17,6 +20,50 @@ pub fn put<'a>(
 
     match RUNTIME.block_on(async { store.inner.put(&Path::from(path), payload).await }) {
         Ok(_) => Ok(atoms::ok().to_term(env)),
+        Err(e) => Ok(map_error(e).to_term(env)),
+    }
+}
+
+/// Upload an object to storage with specific write mode (CAS, create-only, etc.)
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn put_with_mode<'a>(
+    env: Env<'a>,
+    store: ResourceArc<StoreWrapper>,
+    path: String,
+    data: Binary,
+    mode: PutModeNif,
+) -> NifResult<Term<'a>> {
+    // Convert PutModeNif to object_store::PutMode
+    let rust_mode = match mode {
+        PutModeNif::Overwrite => PutMode::Overwrite,
+        PutModeNif::Create => PutMode::Create,
+        PutModeNif::Update { etag, version } => {
+            PutMode::Update(ObjectStoreUpdateVersion {
+                e_tag: etag,
+                version,
+            })
+        }
+    };
+
+    let opts = PutOptions {
+        mode: rust_mode,
+        ..Default::default()
+    };
+
+    let payload = PutPayload::from(data.as_slice().to_vec());
+
+    match RUNTIME.block_on(async {
+        store
+            .inner
+            .put_opts(&Path::from(path), payload, opts)
+            .await
+    }) {
+        Ok(put_result) => {
+            // Return {:ok, etag, version}
+            let etag = put_result.e_tag.unwrap_or_else(|| "".to_string());
+            let version = put_result.version.unwrap_or_else(|| "".to_string());
+            Ok((atoms::ok(), etag, version).encode(env))
+        }
         Err(e) => Ok(map_error(e).to_term(env)),
     }
 }
@@ -241,9 +288,7 @@ fn encode_object_meta_for_list<'a>(env: Env<'a>, meta: &object_store::ObjectMeta
 
     let map = map
         .map_put(
-            Atom::from_str(env, "last_modified")
-                .unwrap()
-                .to_term(env),
+            Atom::from_str(env, "last_modified").unwrap().to_term(env),
             meta.last_modified.to_string().encode(env),
         )
         .unwrap();
@@ -277,12 +322,8 @@ pub fn list_with_delimiter<'a>(
 ) -> NifResult<Term<'a>> {
     let prefix_path = prefix.map(Path::from);
 
-    let result = RUNTIME.block_on(async {
-        store
-            .inner
-            .list_with_delimiter(prefix_path.as_ref())
-            .await
-    });
+    let result =
+        RUNTIME.block_on(async { store.inner.list_with_delimiter(prefix_path.as_ref()).await });
 
     match result {
         Ok(list_result) => {

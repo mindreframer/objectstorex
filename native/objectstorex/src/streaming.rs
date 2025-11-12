@@ -322,9 +322,7 @@ fn encode_object_meta<'a>(env: Env<'a>, meta: &object_store::ObjectMeta) -> Term
 
     let map = map
         .map_put(
-            Atom::from_str(env, "last_modified")
-                .unwrap()
-                .to_term(env),
+            Atom::from_str(env, "last_modified").unwrap().to_term(env),
             meta.last_modified.to_string().encode(env),
         )
         .unwrap();
