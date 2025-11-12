@@ -39,12 +39,10 @@ pub fn put_with_mode<'a>(
     let rust_mode = match mode {
         PutModeNif::Overwrite => PutMode::Overwrite,
         PutModeNif::Create => PutMode::Create,
-        PutModeNif::Update { etag, version } => {
-            PutMode::Update(ObjectStoreUpdateVersion {
-                e_tag: etag,
-                version,
-            })
-        }
+        PutModeNif::Update { etag, version } => PutMode::Update(ObjectStoreUpdateVersion {
+            e_tag: etag,
+            version,
+        }),
     };
 
     let opts = PutOptions {
@@ -54,12 +52,7 @@ pub fn put_with_mode<'a>(
 
     let payload = PutPayload::from(data.as_slice().to_vec());
 
-    match RUNTIME.block_on(async {
-        store
-            .inner
-            .put_opts(&Path::from(path), payload, opts)
-            .await
-    }) {
+    match RUNTIME.block_on(async { store.inner.put_opts(&Path::from(path), payload, opts).await }) {
         Ok(put_result) => {
             // Return {:ok, etag, version}
             let etag = put_result.e_tag.unwrap_or_else(|| "".to_string());
@@ -120,9 +113,7 @@ pub fn head<'a>(
         ..Default::default()
     };
 
-    let result = RUNTIME.block_on(async {
-        store.inner.get_opts(&Path::from(path), opts).await
-    });
+    let result = RUNTIME.block_on(async { store.inner.get_opts(&Path::from(path), opts).await });
 
     match result {
         Ok(get_result) => {
@@ -522,7 +513,9 @@ fn encode_object_meta_with_attributes<'a>(
 
     let map = if let Some(value) = attributes.get(&Attribute::ContentEncoding) {
         map.map_put(
-            Atom::from_str(env, "content_encoding").unwrap().to_term(env),
+            Atom::from_str(env, "content_encoding")
+                .unwrap()
+                .to_term(env),
             value.as_ref().to_string().encode(env),
         )
         .unwrap()
@@ -532,7 +525,9 @@ fn encode_object_meta_with_attributes<'a>(
 
     let map = if let Some(value) = attributes.get(&Attribute::ContentDisposition) {
         map.map_put(
-            Atom::from_str(env, "content_disposition").unwrap().to_term(env),
+            Atom::from_str(env, "content_disposition")
+                .unwrap()
+                .to_term(env),
             value.as_ref().to_string().encode(env),
         )
         .unwrap()
@@ -552,7 +547,9 @@ fn encode_object_meta_with_attributes<'a>(
 
     let map = if let Some(value) = attributes.get(&Attribute::ContentLanguage) {
         map.map_put(
-            Atom::from_str(env, "content_language").unwrap().to_term(env),
+            Atom::from_str(env, "content_language")
+                .unwrap()
+                .to_term(env),
             value.as_ref().to_string().encode(env),
         )
         .unwrap()
@@ -586,12 +583,10 @@ pub fn put_with_attributes<'a>(
     let rust_mode = match mode {
         PutModeNif::Overwrite => PutMode::Overwrite,
         PutModeNif::Create => PutMode::Create,
-        PutModeNif::Update { etag, version } => {
-            PutMode::Update(ObjectStoreUpdateVersion {
-                e_tag: etag,
-                version,
-            })
-        }
+        PutModeNif::Update { etag, version } => PutMode::Update(ObjectStoreUpdateVersion {
+            e_tag: etag,
+            version,
+        }),
     };
 
     // Convert AttributesNif to object_store::Attributes using insert API
@@ -630,12 +625,7 @@ pub fn put_with_attributes<'a>(
     let payload = PutPayload::from(data.as_slice().to_vec());
 
     // Perform the put operation
-    match RUNTIME.block_on(async {
-        store
-            .inner
-            .put_opts(&Path::from(path), payload, opts)
-            .await
-    }) {
+    match RUNTIME.block_on(async { store.inner.put_opts(&Path::from(path), payload, opts).await }) {
         Ok(put_result) => {
             // Return {:ok, etag, version}
             let etag = put_result.e_tag.unwrap_or_else(|| "".to_string());
@@ -694,12 +684,7 @@ pub fn rename_if_not_exists<'a>(
     let to_path = Path::from(to);
 
     // First try to copy_if_not_exists
-    match RUNTIME.block_on(async {
-        store
-            .inner
-            .copy_if_not_exists(&from_path, &to_path)
-            .await
-    }) {
+    match RUNTIME.block_on(async { store.inner.copy_if_not_exists(&from_path, &to_path).await }) {
         Ok(_) => {
             // Copy succeeded, now delete the source
             match RUNTIME.block_on(async { store.inner.delete(&from_path).await }) {
