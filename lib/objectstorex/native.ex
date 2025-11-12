@@ -20,6 +20,7 @@ defmodule ObjectStoreX.Native do
   def head(_store, _path), do: :erlang.nif_error(:nif_not_loaded)
   def copy(_store, _from, _to), do: :erlang.nif_error(:nif_not_loaded)
   def rename(_store, _from, _to), do: :erlang.nif_error(:nif_not_loaded)
+  def get_ranges(_store, _path, _ranges), do: :erlang.nif_error(:nif_not_loaded)
 
   # Streaming operations
   def start_download_stream(_store, _path, _receiver_pid), do: :erlang.nif_error(:nif_not_loaded)
