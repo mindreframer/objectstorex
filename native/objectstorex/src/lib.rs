@@ -8,6 +8,7 @@ mod errors;
 mod operations;
 mod store;
 mod streaming;
+mod types;
 
 use store::StoreWrapper;
 use streaming::UploadSessionWrapper;

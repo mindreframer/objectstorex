@@ -148,18 +148,68 @@ defmodule ObjectStoreX do
     e -> {:error, Exception.message(e)}
   end
 
+  @type put_result :: %{
+          etag: String.t(),
+          version: String.t()
+        }
+
   @doc """
   Upload an object to storage.
 
+  ## Options
+
+  - `:mode` - Write mode (default: `:overwrite`)
+    - `:overwrite` - Always write, overwriting any existing object
+    - `:create` - Only write if the object doesn't exist (returns `{:error, :already_exists}` if exists)
+    - `{:update, %{etag: ..., version: ...}}` - CAS operation, only write if version matches
+
   ## Examples
 
+      # Simple put (overwrite)
       :ok = ObjectStoreX.put(store, "file.txt", "Hello, World!")
+
+      # Create only (distributed lock)
+      case ObjectStoreX.put(store, "lock.txt", "locked", mode: :create) do
+        {:ok, _meta} -> :acquired
+        {:error, :already_exists} -> :already_locked
+      end
+
+      # Compare-and-swap (optimistic locking)
+      {:ok, meta} = ObjectStoreX.head(store, "counter.json")
+      case ObjectStoreX.put(store, "counter.json", new_data,
+                            mode: {:update, %{etag: meta[:etag], version: meta[:version]}}) do
+        {:ok, _meta} -> :success
+        {:error, :precondition_failed} -> :retry
+      end
   """
-  @spec put(store(), path(), binary()) :: :ok | {:error, term()}
-  def put(store, path, data) when is_binary(data) do
+  @spec put(store(), path(), binary(), keyword()) ::
+          :ok | {:ok, put_result()} | {:error, term()}
+  def put(store, path, data, opts \\ [])
+
+  def put(store, path, data, []) when is_binary(data) do
     case Native.put(store, path, data) do
       :ok -> :ok
       error -> {:error, error}
+    end
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
+
+  def put(store, path, data, opts) when is_binary(data) and is_list(opts) do
+    mode = Keyword.get(opts, :mode, :overwrite)
+
+    case Native.put_with_mode(store, path, data, mode) do
+      {:ok, etag, version} ->
+        {:ok, %{etag: etag, version: version}}
+
+      :already_exists ->
+        {:error, :already_exists}
+
+      :precondition_failed ->
+        {:error, :precondition_failed}
+
+      error ->
+        {:error, error}
     end
   rescue
     e -> {:error, Exception.message(e)}
