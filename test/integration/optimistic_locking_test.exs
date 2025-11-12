@@ -10,7 +10,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
 
   describe "OBX003_5A_T3: optimistic counter increments correctly" do
     test "initializes and gets counter value", %{store: store} do
-      key = "counter-#{:rand.uniform(10000)}"
+      key = "counter-#{:rand.uniform(10_000)}"
 
       # Initialize counter - returns {:ok, map} with etag/version
       OptimisticCounter.initialize(store, key, 42)
@@ -20,7 +20,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
     end
 
     test "increments counter by 1", %{store: store} do
-      key = "counter-#{:rand.uniform(10000)}"
+      key = "counter-#{:rand.uniform(10_000)}"
 
       OptimisticCounter.initialize(store, key, 0)
 
@@ -34,7 +34,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
     end
 
     test "increments counter by custom amount", %{store: store} do
-      key = "counter-#{:rand.uniform(10000)}"
+      key = "counter-#{:rand.uniform(10_000)}"
 
       OptimisticCounter.initialize(store, key, 10)
 
@@ -48,7 +48,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
     end
 
     test "decrements counter", %{store: store} do
-      key = "counter-#{:rand.uniform(10000)}"
+      key = "counter-#{:rand.uniform(10_000)}"
 
       OptimisticCounter.initialize(store, key, 10)
 
@@ -62,7 +62,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
     end
 
     test "decrement respects minimum value", %{store: store} do
-      key = "counter-#{:rand.uniform(10000)}"
+      key = "counter-#{:rand.uniform(10_000)}"
 
       OptimisticCounter.initialize(store, key, 5)
 
@@ -80,7 +80,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
 
   describe "OBX003_5A_T4: optimistic counter retries on conflict" do
     test "sequential increments work without conflict", %{store: store} do
-      key = "counter-#{:rand.uniform(10000)}"
+      key = "counter-#{:rand.uniform(10_000)}"
 
       OptimisticCounter.initialize(store, key, 0)
 
@@ -93,7 +93,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
     end
 
     test "concurrent increments all succeed with CAS retry", %{store: store} do
-      key = "counter-concurrent-#{:rand.uniform(10000)}"
+      key = "counter-concurrent-#{:rand.uniform(10_000)}"
 
       OptimisticCounter.initialize(store, key, 0)
 
@@ -108,7 +108,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
           end)
         end
 
-      results = Task.await_many(tasks, 10000)
+      results = Task.await_many(tasks, 10_000)
 
       # Count successes
       success_count = Enum.count(results, fn result -> match?({:ok, _}, result) end)
@@ -124,7 +124,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
     end
 
     test "high concurrency increments (20 parallel)", %{store: store} do
-      key = "counter-high-concurrency-#{:rand.uniform(10000)}"
+      key = "counter-high-concurrency-#{:rand.uniform(10_000)}"
 
       OptimisticCounter.initialize(store, key, 0)
 
@@ -139,7 +139,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
           end)
         end
 
-      results = Task.await_many(tasks, 15000)
+      results = Task.await_many(tasks, 15_000)
 
       # Count successes
       success_count = Enum.count(results, fn result -> match?({:ok, _}, result) end)
@@ -156,7 +156,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
     end
 
     test "mixed concurrent increments and decrements", %{store: store} do
-      key = "counter-mixed-#{:rand.uniform(10000)}"
+      key = "counter-mixed-#{:rand.uniform(10_000)}"
 
       OptimisticCounter.initialize(store, key, 100)
 
@@ -174,8 +174,8 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
           Task.async(fn -> OptimisticCounter.decrement(store, key, max_retries: 30) end)
         end
 
-      increment_results = Task.await_many(increment_tasks, 10000)
-      decrement_results = Task.await_many(decrement_tasks, 10000)
+      increment_results = Task.await_many(increment_tasks, 10_000)
+      decrement_results = Task.await_many(decrement_tasks, 10_000)
 
       # Count successes
       inc_success = Enum.count(increment_results, fn result -> match?({:ok, _}, result) end)
@@ -195,7 +195,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
 
   describe "OBX003_5A: custom update function" do
     test "updates counter with custom function", %{store: store} do
-      key = "counter-#{:rand.uniform(10000)}"
+      key = "counter-#{:rand.uniform(10_000)}"
 
       OptimisticCounter.initialize(store, key, 5)
 
@@ -209,7 +209,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
     end
 
     test "custom update with conditional logic", %{store: store} do
-      key = "counter-#{:rand.uniform(10000)}"
+      key = "counter-#{:rand.uniform(10_000)}"
 
       OptimisticCounter.initialize(store, key, 15)
 
@@ -222,7 +222,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
     end
 
     test "concurrent custom updates", %{store: store} do
-      key = "counter-custom-concurrent-#{:rand.uniform(10000)}"
+      key = "counter-custom-concurrent-#{:rand.uniform(10_000)}"
 
       OptimisticCounter.initialize(store, key, 1)
 
@@ -237,7 +237,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
           end)
         end
 
-      results = Task.await_many(tasks, 10000)
+      results = Task.await_many(tasks, 10_000)
 
       # Count successes
       success_count = Enum.count(results, fn result -> match?({:ok, _}, result) end)
@@ -255,7 +255,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
 
   describe "OBX003_5A: error handling" do
     test "returns error for non-existent counter", %{store: store} do
-      key = "non-existent-#{:rand.uniform(10000)}"
+      key = "non-existent-#{:rand.uniform(10_000)}"
 
       assert {:error, :not_found} = OptimisticCounter.get(store, key)
       assert {:error, :not_found} = OptimisticCounter.increment(store, key)
@@ -263,7 +263,7 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
     end
 
     test "handles max retries exceeded", %{store: store} do
-      key = "counter-#{:rand.uniform(10000)}"
+      key = "counter-#{:rand.uniform(10_000)}"
 
       OptimisticCounter.initialize(store, key, 0)
 
@@ -279,11 +279,13 @@ defmodule ObjectStoreX.Integration.OptimisticLockingTest do
           end)
         end
 
-      results = Task.await_many(tasks, 15000)
+      results = Task.await_many(tasks, 15_000)
 
       # Some should succeed, some might fail
       successes = Enum.count(results, fn result -> match?({:ok, _}, result) end)
-      failures = Enum.count(results, fn result -> match?({:error, :max_retries_exceeded}, result) end)
+
+      failures =
+        Enum.count(results, fn result -> match?({:error, :max_retries_exceeded}, result) end)
 
       # At least some should succeed
       assert successes > 0

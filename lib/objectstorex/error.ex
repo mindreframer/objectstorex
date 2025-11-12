@@ -160,7 +160,8 @@ defmodule ObjectStoreX.Error do
   @spec retryable?(error_reason() | detailed_error()) :: boolean()
   def retryable?(:timeout), do: true
   def retryable?(:network_error), do: true
-  def retryable?(:precondition_failed), do: true  # For CAS retry
+  # For CAS retry
+  def retryable?(:precondition_failed), do: true
 
   # Non-retryable errors
   def retryable?(:not_found), do: false
@@ -229,52 +230,7 @@ defmodule ObjectStoreX.Error do
       {:unknown, "something weird"}
   """
   @spec map_error(any()) :: error_reason()
-  def map_error(msg) when is_binary(msg) do
-    lower = String.downcase(msg)
-
-    cond do
-      String.contains?(lower, "not found") or String.contains?(lower, "notfound") or
-          String.contains?(lower, "no such") or String.contains?(lower, "does not exist") ->
-        :not_found
-
-      String.contains?(lower, "already exists") or String.contains?(lower, "alreadyexists") ->
-        :already_exists
-
-      String.contains?(lower, "precondition") or String.contains?(lower, "etag") or
-          String.contains?(lower, "if-match") ->
-        :precondition_failed
-
-      String.contains?(lower, "not modified") or String.contains?(lower, "notmodified") ->
-        :not_modified
-
-      String.contains?(lower, "permission") or String.contains?(lower, "denied") or
-          String.contains?(lower, "unauthorized") or String.contains?(lower, "forbidden") or
-          String.contains?(lower, "access denied") ->
-        :permission_denied
-
-      String.contains?(lower, "not supported") or String.contains?(lower, "notsupported") or
-          String.contains?(lower, "unsupported") ->
-        :not_supported
-
-      String.contains?(lower, "timeout") or String.contains?(lower, "timed out") or
-          String.contains?(lower, "deadline") ->
-        :timeout
-
-      String.contains?(lower, "network") or String.contains?(lower, "connection") or
-          String.contains?(lower, "unreachable") or String.contains?(lower, "refused") or
-          String.contains?(lower, "reset") ->
-        :network_error
-
-      String.contains?(lower, "invalid") or String.contains?(lower, "malformed") or
-          String.contains?(lower, "bad request") ->
-        :invalid_input
-
-      true ->
-        {:unknown, msg}
-    end
-  end
-
-  # Map atom errors
+  # Map atom errors (must come first to avoid guard warning)
   def map_error(:not_found), do: :not_found
   def map_error(:already_exists), do: :already_exists
   def map_error(:precondition_failed), do: :precondition_failed
@@ -285,8 +241,75 @@ defmodule ObjectStoreX.Error do
   def map_error(:network_error), do: :network_error
   def map_error(:invalid_input), do: :invalid_input
 
+  # Map binary error messages
+  def map_error(msg) when is_binary(msg) do
+    lower = String.downcase(msg)
+
+    map_error_from_patterns(lower, msg)
+  end
+
   # Handle other types
   def map_error(error) do
     {:unknown, inspect(error)}
+  end
+
+  defp map_error_from_patterns(lower, msg) do
+    cond do
+      matches_not_found?(lower) -> :not_found
+      matches_already_exists?(lower) -> :already_exists
+      matches_precondition_failed?(lower) -> :precondition_failed
+      matches_not_modified?(lower) -> :not_modified
+      matches_permission_denied?(lower) -> :permission_denied
+      matches_not_supported?(lower) -> :not_supported
+      matches_timeout?(lower) -> :timeout
+      matches_network_error?(lower) -> :network_error
+      matches_invalid_input?(lower) -> :invalid_input
+      true -> {:unknown, msg}
+    end
+  end
+
+  defp matches_not_found?(lower) do
+    String.contains?(lower, "not found") or String.contains?(lower, "notfound") or
+      String.contains?(lower, "no such") or String.contains?(lower, "does not exist")
+  end
+
+  defp matches_already_exists?(lower) do
+    String.contains?(lower, "already exists") or String.contains?(lower, "alreadyexists")
+  end
+
+  defp matches_precondition_failed?(lower) do
+    String.contains?(lower, "precondition") or String.contains?(lower, "etag") or
+      String.contains?(lower, "if-match")
+  end
+
+  defp matches_not_modified?(lower) do
+    String.contains?(lower, "not modified") or String.contains?(lower, "notmodified")
+  end
+
+  defp matches_permission_denied?(lower) do
+    String.contains?(lower, "permission") or String.contains?(lower, "denied") or
+      String.contains?(lower, "unauthorized") or String.contains?(lower, "forbidden") or
+      String.contains?(lower, "access denied")
+  end
+
+  defp matches_not_supported?(lower) do
+    String.contains?(lower, "not supported") or String.contains?(lower, "notsupported") or
+      String.contains?(lower, "unsupported")
+  end
+
+  defp matches_timeout?(lower) do
+    String.contains?(lower, "timeout") or String.contains?(lower, "timed out") or
+      String.contains?(lower, "deadline")
+  end
+
+  defp matches_network_error?(lower) do
+    String.contains?(lower, "network") or String.contains?(lower, "connection") or
+      String.contains?(lower, "unreachable") or String.contains?(lower, "refused") or
+      String.contains?(lower, "reset")
+  end
+
+  defp matches_invalid_input?(lower) do
+    String.contains?(lower, "invalid") or String.contains?(lower, "malformed") or
+      String.contains?(lower, "bad request")
   end
 end

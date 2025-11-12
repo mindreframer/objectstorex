@@ -56,7 +56,7 @@ defmodule ObjectStoreX.StreamingTest do
         {"binary", <<0, 1, 2, 255, 254, 253>>},
         {"empty", ""},
         {"medium", String.duplicate("x", 1000)},
-        {"large", String.duplicate("test data ", 10000)}
+        {"large", String.duplicate("test data ", 10_000)}
       ]
 
       for {name, data} <- test_cases do
@@ -121,7 +121,7 @@ defmodule ObjectStoreX.StreamingTest do
 
     test "OBX002_1A_T7: Test cancel_download_stream stops streaming", %{store: store} do
       # Put a medium-sized file
-      test_data = String.duplicate("x", 10000)
+      test_data = String.duplicate("x", 10_000)
       assert :ok = ObjectStoreX.put(store, "cancel.txt", test_data)
 
       # Start streaming
@@ -165,7 +165,8 @@ defmodule ObjectStoreX.StreamingTest do
       assert :ok = ObjectStoreX.put(store, "large.txt", test_data)
 
       # Create temp file
-      temp_path = Path.join(System.tmp_dir!(), "objectstorex_test_#{:rand.uniform(1000000)}.txt")
+      temp_path =
+        Path.join(System.tmp_dir!(), "objectstorex_test_#{:rand.uniform(1_000_000)}.txt")
 
       try do
         # Stream to file

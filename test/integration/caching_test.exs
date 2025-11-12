@@ -5,7 +5,7 @@ defmodule ObjectStoreX.Integration.CachingTest do
 
   setup do
     {:ok, store} = ObjectStoreX.new(:memory)
-    cache_name = "test_cache_#{:rand.uniform(100000)}"
+    cache_name = "test_cache_#{:rand.uniform(100_000)}"
     {:ok, cache} = HTTPCache.start_cache(cache_name)
 
     on_exit(fn ->

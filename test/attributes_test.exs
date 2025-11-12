@@ -95,9 +95,7 @@ defmodule ObjectStoreX.AttributesTest do
 
       # Put with tags - should succeed even if provider doesn't support tags
       result =
-        ObjectStoreX.put(store, path, data,
-          tags: %{"environment" => "test", "version" => "1.0"}
-        )
+        ObjectStoreX.put(store, path, data, tags: %{"environment" => "test", "version" => "1.0"})
 
       # Should succeed (tags may be ignored on unsupported providers)
       assert match?({:ok, _}, result)

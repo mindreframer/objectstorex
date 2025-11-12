@@ -87,7 +87,7 @@ defmodule ObjectStoreXTest do
         {"unicode", "Hello 世界 🌍"},
         {"binary", <<0, 1, 2, 255, 254, 253>>},
         {"empty", ""},
-        {"large text", String.duplicate("x", 10000)}
+        {"large text", String.duplicate("x", 10_000)}
       ]
 
       for {name, data} <- test_cases do

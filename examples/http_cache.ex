@@ -408,13 +408,11 @@ defmodule ObjectStoreX.Examples.HTTPCache do
   end
 
   defp increment_stat(stats_table, key) do
-    try do
-      :ets.update_counter(stats_table, key, {2, 1})
-    rescue
-      ArgumentError ->
-        :ets.insert(stats_table, {key, 1})
-        1
-    end
+    :ets.update_counter(stats_table, key, {2, 1})
+  rescue
+    ArgumentError ->
+      :ets.insert(stats_table, {key, 1})
+      1
   end
 
   defp get_stat(stats_table, key) do

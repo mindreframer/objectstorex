@@ -191,7 +191,11 @@ defmodule ObjectStoreX.PerformanceTest do
         tasks =
           for i <- batch_start..batch_end do
             Task.async(fn ->
-              ObjectStoreX.put(store, "list_test/object_#{String.pad_leading("#{i}", 5, "0")}.txt", "data")
+              ObjectStoreX.put(
+                store,
+                "list_test/object_#{String.pad_leading("#{i}", 5, "0")}.txt",
+                "data"
+              )
             end)
           end
 
@@ -292,7 +296,7 @@ defmodule ObjectStoreX.PerformanceTest do
       # Test 2: Range reads (first 1000 bytes, middle 1000 bytes, last 1000 bytes)
       ranges = [
         {0, 1000},
-        {file_size / 2 |> trunc(), file_size / 2 + 1000 |> trunc()},
+        {(file_size / 2) |> trunc(), (file_size / 2 + 1000) |> trunc()},
         {file_size - 1000, file_size}
       ]
 
@@ -314,7 +318,7 @@ defmodule ObjectStoreX.PerformanceTest do
       assert first_range == binary_part(full_data, 0, 1000)
 
       assert middle_range ==
-               binary_part(full_data, file_size / 2 |> trunc(), 1000)
+               binary_part(full_data, (file_size / 2) |> trunc(), 1000)
 
       assert last_range == binary_part(full_data, file_size - 1000, 1000)
 

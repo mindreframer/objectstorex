@@ -75,7 +75,9 @@ defmodule ObjectStoreX.PutModeTest do
 
     # Update with matching etag
     etag = current_meta[:etag] || initial_meta.etag
-    result = ObjectStoreX.put(store, "cas.txt", "v2", mode: {:update, %{etag: etag, version: nil}})
+
+    result =
+      ObjectStoreX.put(store, "cas.txt", "v2", mode: {:update, %{etag: etag, version: nil}})
 
     assert {:ok, _meta} = result
 
@@ -93,7 +95,9 @@ defmodule ObjectStoreX.PutModeTest do
 
     # Try to update with wrong/stale etag
     result =
-      ObjectStoreX.put(store, "cas.txt", "v2", mode: {:update, %{etag: "wrong-etag", version: nil}})
+      ObjectStoreX.put(store, "cas.txt", "v2",
+        mode: {:update, %{etag: "wrong-etag", version: nil}}
+      )
 
     assert {:error, :precondition_failed} = result
 
@@ -117,9 +121,7 @@ defmodule ObjectStoreX.PutModeTest do
     etag = current_meta[:etag] || meta1.etag
 
     {:ok, _meta2} =
-      ObjectStoreX.put(store, "counter.json", "2",
-        mode: {:update, %{etag: etag, version: nil}}
-      )
+      ObjectStoreX.put(store, "counter.json", "2", mode: {:update, %{etag: etag, version: nil}})
 
     # Verify update succeeded
     {:ok, new_data} = ObjectStoreX.get(store, "counter.json")
