@@ -23,6 +23,8 @@ defmodule ObjectStoreX.Native do
   def head(_store, _path), do: :erlang.nif_error(:nif_not_loaded)
   def copy(_store, _from, _to), do: :erlang.nif_error(:nif_not_loaded)
   def rename(_store, _from, _to), do: :erlang.nif_error(:nif_not_loaded)
+  def copy_if_not_exists(_store, _from, _to), do: :erlang.nif_error(:nif_not_loaded)
+  def rename_if_not_exists(_store, _from, _to), do: :erlang.nif_error(:nif_not_loaded)
   def get_ranges(_store, _path, _ranges), do: :erlang.nif_error(:nif_not_loaded)
   def delete_many(_store, _paths), do: :erlang.nif_error(:nif_not_loaded)
 

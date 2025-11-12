@@ -436,6 +436,95 @@ defmodule ObjectStoreX do
   end
 
   @doc """
+  Copy an object only if the destination doesn't exist (atomic where supported).
+
+  Provider support:
+  - Azure: ✅ Native atomic copy_if_not_exists
+  - GCS: ✅ Native atomic copy_if_not_exists
+  - Local: ✅ Atomic via filesystem operations
+  - Memory: ✅ Atomic via in-memory checks
+  - S3: ❌ Not supported (returns `{:error, :not_supported}`)
+
+  For S3, use a manual check-then-copy pattern:
+
+      case ObjectStoreX.head(store, destination) do
+        {:error, :not_found} ->
+          ObjectStoreX.copy(store, source, destination)
+        {:ok, _meta} ->
+          {:error, :already_exists}
+      end
+
+  ## Examples
+
+      # Atomic copy (Azure/GCS/Local/Memory)
+      case ObjectStoreX.copy_if_not_exists(store, "source.txt", "backup.txt") do
+        :ok -> :copied
+        {:error, :already_exists} -> :destination_exists
+        {:error, :not_supported} -> :use_manual_pattern
+      end
+
+      # Distributed lock backup
+      case ObjectStoreX.copy_if_not_exists(store, "lock.txt", "lock-backup.txt") do
+        :ok -> :backup_created
+        {:error, :already_exists} -> :backup_already_exists
+      end
+  """
+  @spec copy_if_not_exists(store(), path(), path()) :: :ok | {:error, term()}
+  def copy_if_not_exists(store, from, to) do
+    case Native.copy_if_not_exists(store, from, to) do
+      :ok -> :ok
+      :already_exists -> {:error, :already_exists}
+      :not_supported -> {:error, :not_supported}
+      :not_found -> {:error, :not_found}
+      error -> {:error, error}
+    end
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
+
+  @doc """
+  Rename an object only if the destination doesn't exist (atomic where supported).
+
+  This is implemented as copy_if_not_exists followed by delete of the source.
+  The operation is only atomic if the underlying provider supports atomic copy_if_not_exists.
+
+  Provider support:
+  - Azure: ✅ Atomic
+  - GCS: ✅ Atomic
+  - Local: ✅ Atomic
+  - Memory: ✅ Atomic
+  - S3: ❌ Not supported (returns `{:error, :not_supported}`)
+
+  ## Examples
+
+      # Atomic rename (Azure/GCS/Local/Memory)
+      case ObjectStoreX.rename_if_not_exists(store, "old.txt", "new.txt") do
+        :ok -> :renamed
+        {:error, :already_exists} -> :destination_exists
+        {:error, :not_supported} -> :use_manual_pattern
+      end
+
+      # Safe rename with collision detection
+      case ObjectStoreX.rename_if_not_exists(store, "temp.txt", "final.txt") do
+        :ok -> :moved
+        {:error, :already_exists} -> :collision
+        {:error, :not_found} -> :source_missing
+      end
+  """
+  @spec rename_if_not_exists(store(), path(), path()) :: :ok | {:error, term()}
+  def rename_if_not_exists(store, from, to) do
+    case Native.rename_if_not_exists(store, from, to) do
+      :ok -> :ok
+      :already_exists -> {:error, :already_exists}
+      :not_supported -> {:error, :not_supported}
+      :not_found -> {:error, :not_found}
+      error -> {:error, error}
+    end
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
+
+  @doc """
   Fetch multiple byte ranges from an object in a single operation.
 
   Useful for reading file headers, footers, and metadata without downloading
