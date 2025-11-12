@@ -95,3 +95,21 @@ impl<'a> Decoder<'a> for PutModeNif {
         Err(RustlerError::BadArg)
     }
 }
+
+/// Elixir representation of object attributes for metadata
+///
+/// Matches Elixir struct: %ObjectStoreX.Attributes{}
+#[derive(Debug, Clone, NifStruct)]
+#[module = "ObjectStoreX.Attributes"]
+pub struct AttributesNif {
+    /// MIME type (e.g., "application/json")
+    pub content_type: Option<String>,
+    /// Content encoding (e.g., "gzip")
+    pub content_encoding: Option<String>,
+    /// Download behavior (e.g., "attachment; filename=file.pdf")
+    pub content_disposition: Option<String>,
+    /// Cache directives (e.g., "max-age=3600")
+    pub cache_control: Option<String>,
+    /// Content language (e.g., "en-US")
+    pub content_language: Option<String>,
+}
