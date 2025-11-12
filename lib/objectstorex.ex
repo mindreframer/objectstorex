@@ -39,7 +39,7 @@ defmodule ObjectStoreX do
   - `{:error, reason}` on failure
 
   For detailed information about error types and handling patterns,
-  see `ObjectStoreX.Errors`.
+  see `ObjectStoreX.Error`.
   """
 
   alias ObjectStoreX.Native
