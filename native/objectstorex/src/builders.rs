@@ -13,6 +13,7 @@ pub fn new_s3(
     region: String,
     access_key_id: Option<String>,
     secret_access_key: Option<String>,
+    endpoint: Option<String>,
 ) -> NifResult<ResourceArc<StoreWrapper>> {
     let mut builder = AmazonS3Builder::new()
         .with_bucket_name(bucket)
@@ -24,6 +25,10 @@ pub fn new_s3(
 
     if let Some(secret) = secret_access_key {
         builder = builder.with_secret_access_key(secret);
+    }
+
+    if let Some(ep) = endpoint {
+        builder = builder.with_endpoint(ep);
     }
 
     let store = builder
