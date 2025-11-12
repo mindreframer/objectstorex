@@ -1,4 +1,4 @@
-use rustler::{Decoder, Error as RustlerError, NifResult, Term};
+use rustler::{Decoder, Error as RustlerError, NifResult, NifStruct, Term};
 
 /// Elixir representation of PutMode for conditional writes
 ///
@@ -14,6 +14,40 @@ pub enum PutModeNif {
         etag: Option<String>,
         version: Option<String>,
     },
+}
+
+/// Elixir representation of GetOptions for conditional reads
+///
+/// Matches Elixir struct: %ObjectStoreX.GetOptions{}
+#[derive(Debug, Clone, NifStruct)]
+#[module = "ObjectStoreX.GetOptions"]
+pub struct GetOptionsNif {
+    /// Only return if ETag matches (HTTP If-Match)
+    pub if_match: Option<String>,
+    /// Only return if ETag differs (HTTP If-None-Match)
+    pub if_none_match: Option<String>,
+    /// Only return if modified after date (Unix timestamp in seconds)
+    pub if_modified_since: Option<i64>,
+    /// Only return if not modified since date (Unix timestamp in seconds)
+    pub if_unmodified_since: Option<i64>,
+    /// Byte range to fetch
+    pub range: Option<RangeNif>,
+    /// Specific object version
+    pub version: Option<String>,
+    /// Return metadata only (no content)
+    pub head: bool,
+}
+
+/// Elixir representation of a byte range for partial reads
+///
+/// Matches Elixir struct: %ObjectStoreX.Range{}
+#[derive(Debug, Clone, NifStruct)]
+#[module = "ObjectStoreX.Range"]
+pub struct RangeNif {
+    /// Start byte (inclusive)
+    pub start: u64,
+    /// End byte (exclusive)
+    pub end: u64,
 }
 
 impl<'a> Decoder<'a> for PutModeNif {

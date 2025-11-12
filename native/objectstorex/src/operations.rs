@@ -1,10 +1,12 @@
 use crate::atoms;
 use crate::errors::map_error;
 use crate::store::StoreWrapper;
-use crate::types::PutModeNif;
+use crate::types::{GetOptionsNif, PutModeNif};
 use crate::RUNTIME;
+use chrono::{DateTime, TimeZone, Utc};
 use object_store::{
-    path::Path, PutMode, PutOptions, PutPayload, UpdateVersion as ObjectStoreUpdateVersion,
+    path::Path, GetOptions, GetRange, PutMode, PutOptions, PutPayload,
+    UpdateVersion as ObjectStoreUpdateVersion,
 };
 use rustler::{Binary, Encoder, Env, NifResult, OwnedBinary, ResourceArc, Term};
 
@@ -346,4 +348,140 @@ pub fn list_with_delimiter<'a>(
         }
         Err(e) => Ok(map_error(e).to_term(env)),
     }
+}
+
+/// Convert Unix timestamp (seconds) to chrono DateTime<Utc>
+///
+/// # Arguments
+/// * `timestamp` - Unix timestamp in seconds since epoch
+///
+/// # Returns
+/// DateTime<Utc> representation of the timestamp
+fn timestamp_to_datetime(timestamp: i64) -> DateTime<Utc> {
+    Utc.timestamp_opt(timestamp, 0)
+        .single()
+        .expect("Invalid timestamp")
+}
+
+/// Download an object from storage with conditional options
+///
+/// Supports HTTP-style conditional requests for caching and consistency:
+/// - if_match: Only return if ETag matches
+/// - if_none_match: Only return if ETag differs
+/// - if_modified_since: Only return if modified after date
+/// - if_unmodified_since: Only return if not modified since date
+/// - range: Fetch specific byte range
+/// - version: Fetch specific object version
+/// - head: Return metadata only
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn get_with_options<'a>(
+    env: Env<'a>,
+    store: ResourceArc<StoreWrapper>,
+    path: String,
+    options: GetOptionsNif,
+) -> NifResult<Term<'a>> {
+    // Convert GetOptionsNif to object_store::GetOptions
+    let mut rust_options = GetOptions::default();
+
+    if let Some(etag) = options.if_match {
+        rust_options.if_match = Some(etag);
+    }
+
+    if let Some(etag) = options.if_none_match {
+        rust_options.if_none_match = Some(etag);
+    }
+
+    if let Some(timestamp) = options.if_modified_since {
+        rust_options.if_modified_since = Some(timestamp_to_datetime(timestamp));
+    }
+
+    if let Some(timestamp) = options.if_unmodified_since {
+        rust_options.if_unmodified_since = Some(timestamp_to_datetime(timestamp));
+    }
+
+    if let Some(range) = options.range {
+        rust_options.range = Some(GetRange::Bounded(range.start as usize..range.end as usize));
+    }
+
+    if let Some(version) = options.version {
+        rust_options.version = Some(version);
+    }
+
+    rust_options.head = options.head;
+
+    // Perform the get operation
+    let result =
+        RUNTIME.block_on(async { store.inner.get_opts(&Path::from(path), rust_options).await });
+
+    match result {
+        Ok(get_result) => {
+            // Get metadata
+            let meta = get_result.meta.clone();
+
+            // If head-only request or if we should return data
+            let data = if options.head {
+                vec![]
+            } else {
+                match RUNTIME.block_on(async { get_result.bytes().await }) {
+                    Ok(bytes) => bytes.to_vec(),
+                    Err(e) => return Ok(map_error(e).to_term(env)),
+                }
+            };
+
+            // Encode metadata to Elixir map
+            let meta_map = encode_object_meta_with_version(env, &meta);
+
+            // Return {:ok, data, metadata}
+            Ok((atoms::ok(), data, meta_map).encode(env))
+        }
+        Err(e) => Ok(map_error(e).to_term(env)),
+    }
+}
+
+/// Helper function to encode ObjectMeta with version information to Elixir map
+fn encode_object_meta_with_version<'a>(env: Env<'a>, meta: &object_store::ObjectMeta) -> Term<'a> {
+    use rustler::types::atom::Atom;
+    use rustler::types::map;
+
+    let map = map::map_new(env);
+
+    let map = map
+        .map_put(
+            Atom::from_str(env, "location").unwrap().to_term(env),
+            meta.location.to_string().encode(env),
+        )
+        .unwrap();
+
+    let map = map
+        .map_put(
+            Atom::from_str(env, "size").unwrap().to_term(env),
+            meta.size.encode(env),
+        )
+        .unwrap();
+
+    let map = map
+        .map_put(
+            Atom::from_str(env, "last_modified").unwrap().to_term(env),
+            meta.last_modified.to_string().encode(env),
+        )
+        .unwrap();
+
+    let map = if let Some(ref etag) = meta.e_tag {
+        map.map_put(
+            Atom::from_str(env, "etag").unwrap().to_term(env),
+            etag.encode(env),
+        )
+        .unwrap()
+    } else {
+        map
+    };
+
+    let map = map
+        .map_put(
+            Atom::from_str(env, "version").unwrap().to_term(env),
+            meta.version.as_ref().map(|v| v.to_string()).encode(env),
+        )
+        .unwrap();
+
+    map
 }

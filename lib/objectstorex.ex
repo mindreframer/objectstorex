@@ -216,14 +216,48 @@ defmodule ObjectStoreX do
   end
 
   @doc """
-  Download an object from storage.
+  Download an object from storage with optional conditional requests.
+
+  ## Options
+
+  Supports HTTP-style conditional requests for caching and consistency:
+  - `:if_match` - Only return if ETag matches (HTTP If-Match)
+  - `:if_none_match` - Only return if ETag differs (HTTP If-None-Match)
+  - `:if_modified_since` - Only return if modified after date (DateTime or Unix timestamp)
+  - `:if_unmodified_since` - Only return if not modified since date (DateTime or Unix timestamp)
+  - `:range` - Byte range `{start, end}` or `%ObjectStoreX.Range{}`
+  - `:version` - Specific object version
+  - `:head` - Return metadata only (no content)
 
   ## Examples
 
+      # Simple get
       {:ok, data} = ObjectStoreX.get(store, "file.txt")
+
+      # HTTP cache validation
+      case ObjectStoreX.get(store, "file.txt", if_none_match: cached_etag) do
+        {:ok, data, meta} -> {:modified, data, meta}
+        {:error, :not_modified} -> :use_cache
+      end
+
+      # Consistent read with ETag
+      {:ok, meta} = ObjectStoreX.head(store, "config.json")
+      case ObjectStoreX.get(store, "config.json", if_match: meta[:etag]) do
+        {:ok, data, _meta} -> {:ok, data}
+        {:error, :precondition_failed} -> :retry
+      end
+
+      # Range read
+      {:ok, data, meta} = ObjectStoreX.get(store, "large.bin", range: {0, 1000})
+
+      # Head-only (metadata without content)
+      {:ok, _empty, meta} = ObjectStoreX.get(store, "file.txt", head: true)
   """
-  @spec get(store(), path()) :: {:ok, binary()} | {:error, term()}
-  def get(store, path) do
+  @spec get(store(), path(), keyword()) ::
+    {:ok, binary()} | {:ok, binary(), metadata()} | {:error, term()}
+  def get(store, path, opts \\ [])
+
+  def get(store, path, []) do
     case Native.get(store, path) do
       data when is_binary(data) -> {:ok, data}
       :not_found -> {:error, :not_found}
@@ -232,6 +266,46 @@ defmodule ObjectStoreX do
   rescue
     e -> {:error, Exception.message(e)}
   end
+
+  def get(store, path, opts) when is_list(opts) do
+    # Convert keyword options to GetOptions struct
+    get_options = %ObjectStoreX.GetOptions{
+      if_match: Keyword.get(opts, :if_match),
+      if_none_match: Keyword.get(opts, :if_none_match),
+      if_modified_since: convert_datetime_to_timestamp(Keyword.get(opts, :if_modified_since)),
+      if_unmodified_since: convert_datetime_to_timestamp(Keyword.get(opts, :if_unmodified_since)),
+      range: convert_range(Keyword.get(opts, :range)),
+      version: Keyword.get(opts, :version),
+      head: Keyword.get(opts, :head, false)
+    }
+
+    case Native.get_with_options(store, path, get_options) do
+      {:ok, data, meta} when is_map(meta) ->
+        # Convert charlist to binary if needed
+        binary_data = if is_list(data), do: :erlang.list_to_binary(data), else: data
+        {:ok, binary_data, meta}
+      :not_found ->
+        {:error, :not_found}
+      :not_modified ->
+        {:error, :not_modified}
+      :precondition_failed ->
+        {:error, :precondition_failed}
+      error ->
+        {:error, error}
+    end
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
+
+  # Convert DateTime to Unix timestamp, or pass through integer timestamps
+  defp convert_datetime_to_timestamp(nil), do: nil
+  defp convert_datetime_to_timestamp(%DateTime{} = dt), do: DateTime.to_unix(dt)
+  defp convert_datetime_to_timestamp(ts) when is_integer(ts), do: ts
+
+  # Convert range tuple or Range struct to Range struct
+  defp convert_range(nil), do: nil
+  defp convert_range({start, end_pos}), do: %ObjectStoreX.Range{start: start, end: end_pos}
+  defp convert_range(%ObjectStoreX.Range{} = range), do: range
 
   @doc """
   Delete an object from storage.
