@@ -85,7 +85,7 @@ defmodule Objectstorex.MixProject do
         "LICENSE",
         "CHANGELOG.md"
       ],
-      maintainers: ["Your Name"],
+      maintainers: ["ObjectStoreX Contributors"],
       licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => @source_url,

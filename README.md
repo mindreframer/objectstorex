@@ -375,7 +375,7 @@ ObjectStoreX uses high-performance Rust NIFs with async I/O for optimal throughp
 
 ## License
 
-Copyright 2024. Licensed under the MIT License.
+Copyright 2024-2025. Licensed under the Apache License, Version 2.0.
 
 ## Credits
 
