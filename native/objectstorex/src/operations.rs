@@ -161,7 +161,10 @@ pub fn get_ranges<'a>(
         .collect();
 
     let results = RUNTIME.block_on(async {
-        store.inner.get_ranges(&Path::from(path), &range_objects).await
+        store
+            .inner
+            .get_ranges(&Path::from(path), &range_objects)
+            .await
     });
 
     match results {

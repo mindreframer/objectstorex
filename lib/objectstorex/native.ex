@@ -25,4 +25,10 @@ defmodule ObjectStoreX.Native do
   # Streaming operations
   def start_download_stream(_store, _path, _receiver_pid), do: :erlang.nif_error(:nif_not_loaded)
   def cancel_download_stream(_stream_id), do: :erlang.nif_error(:nif_not_loaded)
+
+  # Upload streaming (multipart)
+  def start_upload_session(_store, _path), do: :erlang.nif_error(:nif_not_loaded)
+  def upload_chunk(_session, _chunk), do: :erlang.nif_error(:nif_not_loaded)
+  def complete_upload(_session), do: :erlang.nif_error(:nif_not_loaded)
+  def abort_upload(_session), do: :erlang.nif_error(:nif_not_loaded)
 end

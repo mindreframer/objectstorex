@@ -104,4 +104,68 @@ defmodule ObjectStoreX.Stream do
     Native.cancel_download_stream(stream_id)
     :ok
   end
+
+  @doc """
+  Upload a large file using streaming multipart upload.
+
+  The function consumes an Elixir Stream and uploads its data in chunks,
+  using multipart upload behind the scenes. This allows uploading large files
+  without loading them entirely into memory.
+
+  ## Options
+
+  None currently supported.
+
+  ## Examples
+
+      # Upload from file stream
+      File.stream!("large-file.bin", [], 10_485_760)  # 10MB chunks
+      |> ObjectStoreX.Stream.upload(store, "destination.bin")
+
+      # Upload from generated data
+      Stream.repeatedly(fn -> :crypto.strong_rand_bytes(1024) end)
+      |> Stream.take(10_000)  # ~10MB total
+      |> ObjectStoreX.Stream.upload(store, "random.dat")
+
+  ## Error Handling
+
+  If an error occurs during upload, the multipart upload will be aborted
+  automatically and an error tuple will be returned.
+  """
+  @spec upload(Enumerable.t(), store(), path(), keyword()) :: :ok | {:error, term()}
+  def upload(stream, store, path, _opts \\ []) do
+    case Native.start_upload_session(store, path) do
+      {:ok, session} ->
+        try do
+          # Consume the stream and upload chunks
+          stream
+          |> Stream.each(fn chunk ->
+            case Native.upload_chunk(session, chunk) do
+              :ok ->
+                :ok
+
+              {:error, reason} ->
+                throw({:upload_error, reason})
+            end
+          end)
+          |> Stream.run()
+
+          # Complete the upload
+          case Native.complete_upload(session) do
+            :ok -> :ok
+            {:error, reason} -> {:error, reason}
+          end
+        catch
+          {:upload_error, reason} ->
+            # Abort the upload on error
+            Native.abort_upload(session)
+            {:error, reason}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
 end

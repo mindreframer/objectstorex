@@ -4,9 +4,11 @@ use crate::RUNTIME;
 use bytes::Bytes;
 use futures::StreamExt;
 use object_store::path::Path;
-use rustler::{Encoder, Env, LocalPid, NifResult, OwnedEnv, ResourceArc, Term};
+use object_store::{MultipartUpload, PutPayload};
+use rustler::{Binary, Encoder, Env, LocalPid, NifResult, OwnedEnv, ResourceArc, Term};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use tokio::sync::Mutex as TokioMutex;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
@@ -131,3 +133,157 @@ fn send_error(receiver_pid: &LocalPid, stream_id: &str, error_msg: String) {
     });
 }
 
+// ============================================================================
+// Upload Streaming (Multipart Upload)
+// ============================================================================
+
+/// Wrapper for multipart upload session
+pub struct UploadSessionWrapper {
+    _session_id: String,
+    multipart: Arc<TokioMutex<Box<dyn MultipartUpload>>>,
+    buffer: Arc<Mutex<Vec<u8>>>,
+    part_size: usize,
+}
+
+/// Start a new multipart upload session
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn start_upload_session<'a>(
+    env: Env<'a>,
+    store: ResourceArc<StoreWrapper>,
+    path: String,
+) -> NifResult<Term<'a>> {
+    let session_id = Uuid::new_v4().to_string();
+    let path_obj = Path::from(path);
+
+    // Initialize multipart upload
+    let multipart = RUNTIME
+        .block_on(async { store.inner.put_multipart(&path_obj).await })
+        .map_err(|e| {
+            rustler::Error::Term(Box::new(format!(
+                "Failed to initialize multipart upload: {}",
+                e
+            )))
+        })?;
+
+    let session = UploadSessionWrapper {
+        _session_id: session_id.clone(),
+        multipart: Arc::new(TokioMutex::new(multipart)),
+        buffer: Arc::new(Mutex::new(Vec::new())),
+        part_size: 5 * 1024 * 1024, // 5MB minimum part size
+    };
+
+    let resource = ResourceArc::new(session);
+
+    // Return {:ok, resource}
+    Ok((atoms::ok(), resource).encode(env))
+}
+
+/// Upload a chunk of data to the multipart upload session
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn upload_chunk<'a>(
+    env: Env<'a>,
+    session: ResourceArc<UploadSessionWrapper>,
+    chunk: Binary,
+) -> NifResult<Term<'a>> {
+    // Append chunk to buffer
+    {
+        let mut buffer = session
+            .buffer
+            .lock()
+            .map_err(|e| rustler::Error::Term(Box::new(format!("Buffer lock error: {}", e))))?;
+        buffer.extend_from_slice(chunk.as_slice());
+    }
+
+    // Check if we need to upload a part
+    let should_upload = {
+        let buffer = session
+            .buffer
+            .lock()
+            .map_err(|e| rustler::Error::Term(Box::new(format!("Buffer lock error: {}", e))))?;
+        buffer.len() >= session.part_size
+    };
+
+    if should_upload {
+        // Extract data from buffer
+        let data = {
+            let mut buffer = session
+                .buffer
+                .lock()
+                .map_err(|e| rustler::Error::Term(Box::new(format!("Buffer lock error: {}", e))))?;
+            buffer.drain(..).collect::<Vec<u8>>()
+        };
+
+        // Upload the part
+        let payload = PutPayload::from(data);
+        let multipart_clone = session.multipart.clone();
+
+        RUNTIME
+            .block_on(async move {
+                let mut multipart = multipart_clone.lock().await;
+                multipart.put_part(payload).await
+            })
+            .map_err(|e| rustler::Error::Term(Box::new(format!("Failed to upload part: {}", e))))?;
+    }
+
+    Ok(atoms::ok().encode(env))
+}
+
+/// Complete the multipart upload
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn complete_upload<'a>(
+    env: Env<'a>,
+    session: ResourceArc<UploadSessionWrapper>,
+) -> NifResult<Term<'a>> {
+    // Upload any remaining data in the buffer as the final part
+    let remaining_data = {
+        let mut buffer = session
+            .buffer
+            .lock()
+            .map_err(|e| rustler::Error::Term(Box::new(format!("Buffer lock error: {}", e))))?;
+        buffer.drain(..).collect::<Vec<u8>>()
+    };
+
+    // Upload final part if there's remaining data
+    if !remaining_data.is_empty() {
+        let payload = PutPayload::from(remaining_data);
+        let multipart_clone = session.multipart.clone();
+
+        RUNTIME
+            .block_on(async move {
+                let mut multipart = multipart_clone.lock().await;
+                multipart.put_part(payload).await
+            })
+            .map_err(|e| {
+                rustler::Error::Term(Box::new(format!("Failed to upload final part: {}", e)))
+            })?;
+    }
+
+    // Complete the multipart upload
+    let multipart_clone = session.multipart.clone();
+    RUNTIME
+        .block_on(async move {
+            let mut multipart = multipart_clone.lock().await;
+            multipart.complete().await
+        })
+        .map_err(|e| rustler::Error::Term(Box::new(format!("Failed to complete upload: {}", e))))?;
+
+    Ok(atoms::ok().encode(env))
+}
+
+/// Abort the multipart upload
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn abort_upload<'a>(
+    env: Env<'a>,
+    session: ResourceArc<UploadSessionWrapper>,
+) -> NifResult<Term<'a>> {
+    let multipart_clone = session.multipart.clone();
+
+    RUNTIME
+        .block_on(async move {
+            let mut multipart = multipart_clone.lock().await;
+            multipart.abort().await
+        })
+        .map_err(|e| rustler::Error::Term(Box::new(format!("Failed to abort upload: {}", e))))?;
+
+    Ok(atoms::ok().encode(env))
+}
