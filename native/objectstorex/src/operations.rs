@@ -5,7 +5,7 @@ use crate::types::{AttributesNif, GetOptionsNif, PutModeNif};
 use crate::RUNTIME;
 use chrono::{DateTime, TimeZone, Utc};
 use object_store::{
-    path::Path, Attributes, GetOptions, GetRange, PutMode, PutOptions, PutPayload,
+    path::Path, Attribute, Attributes, GetOptions, GetRange, PutMode, PutOptions, PutPayload,
     UpdateVersion as ObjectStoreUpdateVersion,
 };
 use rustler::{Binary, Encoder, Env, NifResult, OwnedBinary, ResourceArc, Term};
@@ -106,18 +106,32 @@ pub fn delete<'a>(
 }
 
 /// Get object metadata without downloading content
+///
+/// Uses get_opts with head: true to retrieve full metadata including attributes
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn head<'a>(
     env: Env<'a>,
     store: ResourceArc<StoreWrapper>,
     path: String,
 ) -> NifResult<Term<'a>> {
-    let meta = RUNTIME.block_on(async { store.inner.head(&Path::from(path)).await });
+    // Use get_opts with head: true to get attributes
+    let opts = GetOptions {
+        head: true,
+        ..Default::default()
+    };
 
-    match meta {
-        Ok(meta) => {
-            // Convert ObjectMeta to Elixir map (basic version, compatible with all providers)
-            let map = encode_object_meta_with_version(env, &meta);
+    let result = RUNTIME.block_on(async {
+        store.inner.get_opts(&Path::from(path), opts).await
+    });
+
+    match result {
+        Ok(get_result) => {
+            // Extract metadata and attributes
+            let meta = &get_result.meta;
+            let attributes = &get_result.attributes;
+
+            // Convert ObjectMeta and Attributes to Elixir map
+            let map = encode_object_meta_with_attributes(env, meta, attributes);
             Ok(map)
         }
         Err(e) => Ok(map_error(e).to_term(env)),
@@ -445,6 +459,110 @@ fn encode_object_meta_with_version<'a>(env: Env<'a>, meta: &object_store::Object
     map
 }
 
+/// Helper function to encode ObjectMeta with Attributes to Elixir map
+fn encode_object_meta_with_attributes<'a>(
+    env: Env<'a>,
+    meta: &object_store::ObjectMeta,
+    attributes: &Attributes,
+) -> Term<'a> {
+    use rustler::types::atom::Atom;
+    use rustler::types::map;
+
+    let map = map::map_new(env);
+
+    // Add basic metadata
+    let map = map
+        .map_put(
+            Atom::from_str(env, "location").unwrap().to_term(env),
+            meta.location.to_string().encode(env),
+        )
+        .unwrap();
+
+    let map = map
+        .map_put(
+            Atom::from_str(env, "size").unwrap().to_term(env),
+            meta.size.encode(env),
+        )
+        .unwrap();
+
+    let map = map
+        .map_put(
+            Atom::from_str(env, "last_modified").unwrap().to_term(env),
+            meta.last_modified.to_string().encode(env),
+        )
+        .unwrap();
+
+    let map = if let Some(ref etag) = meta.e_tag {
+        map.map_put(
+            Atom::from_str(env, "etag").unwrap().to_term(env),
+            etag.encode(env),
+        )
+        .unwrap()
+    } else {
+        map
+    };
+
+    let map = map
+        .map_put(
+            Atom::from_str(env, "version").unwrap().to_term(env),
+            meta.version.as_ref().map(|v| v.to_string()).encode(env),
+        )
+        .unwrap();
+
+    // Add attributes if present using get() method
+    let map = if let Some(value) = attributes.get(&Attribute::ContentType) {
+        map.map_put(
+            Atom::from_str(env, "content_type").unwrap().to_term(env),
+            value.as_ref().to_string().encode(env),
+        )
+        .unwrap()
+    } else {
+        map
+    };
+
+    let map = if let Some(value) = attributes.get(&Attribute::ContentEncoding) {
+        map.map_put(
+            Atom::from_str(env, "content_encoding").unwrap().to_term(env),
+            value.as_ref().to_string().encode(env),
+        )
+        .unwrap()
+    } else {
+        map
+    };
+
+    let map = if let Some(value) = attributes.get(&Attribute::ContentDisposition) {
+        map.map_put(
+            Atom::from_str(env, "content_disposition").unwrap().to_term(env),
+            value.as_ref().to_string().encode(env),
+        )
+        .unwrap()
+    } else {
+        map
+    };
+
+    let map = if let Some(value) = attributes.get(&Attribute::CacheControl) {
+        map.map_put(
+            Atom::from_str(env, "cache_control").unwrap().to_term(env),
+            value.as_ref().to_string().encode(env),
+        )
+        .unwrap()
+    } else {
+        map
+    };
+
+    let map = if let Some(value) = attributes.get(&Attribute::ContentLanguage) {
+        map.map_put(
+            Atom::from_str(env, "content_language").unwrap().to_term(env),
+            value.as_ref().to_string().encode(env),
+        )
+        .unwrap()
+    } else {
+        map
+    };
+
+    map
+}
+
 /// Upload an object to storage with attributes and optional tags
 ///
 /// Supports setting HTTP headers and metadata:
@@ -461,7 +579,7 @@ pub fn put_with_attributes<'a>(
     path: String,
     data: Binary,
     mode: PutModeNif,
-    _attributes: AttributesNif,
+    attributes: AttributesNif,
     _tags: Vec<(String, String)>,
 ) -> NifResult<Term<'a>> {
     // Convert PutModeNif to object_store::PutMode
@@ -476,12 +594,30 @@ pub fn put_with_attributes<'a>(
         }
     };
 
-    // Note: In object_store 0.11.2, Attributes struct doesn't expose setter methods
-    // For now, we use default attributes and focus on mode support
-    // Future versions may support attributes more directly
-    let rust_attributes = Attributes::default();
+    // Convert AttributesNif to object_store::Attributes using insert API
+    let mut rust_attributes = Attributes::new();
 
-    // Build PutOptions with mode
+    if let Some(content_type) = attributes.content_type {
+        rust_attributes.insert(Attribute::ContentType, content_type.into());
+    }
+
+    if let Some(content_encoding) = attributes.content_encoding {
+        rust_attributes.insert(Attribute::ContentEncoding, content_encoding.into());
+    }
+
+    if let Some(content_disposition) = attributes.content_disposition {
+        rust_attributes.insert(Attribute::ContentDisposition, content_disposition.into());
+    }
+
+    if let Some(cache_control) = attributes.cache_control {
+        rust_attributes.insert(Attribute::CacheControl, cache_control.into());
+    }
+
+    if let Some(content_language) = attributes.content_language {
+        rust_attributes.insert(Attribute::ContentLanguage, content_language.into());
+    }
+
+    // Build PutOptions with mode and attributes
     let opts = PutOptions {
         mode: rust_mode,
         attributes: rust_attributes,
