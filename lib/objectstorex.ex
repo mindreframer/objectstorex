@@ -162,6 +162,12 @@ defmodule ObjectStoreX do
     - `:overwrite` - Always write, overwriting any existing object
     - `:create` - Only write if the object doesn't exist (returns `{:error, :already_exists}` if exists)
     - `{:update, %{etag: ..., version: ...}}` - CAS operation, only write if version matches
+  - `:content_type` - MIME type (e.g., "application/json")
+  - `:content_encoding` - Encoding (e.g., "gzip")
+  - `:content_disposition` - Download behavior (e.g., "attachment; filename=file.pdf")
+  - `:cache_control` - Cache directives (e.g., "max-age=3600")
+  - `:content_language` - Language (e.g., "en-US")
+  - `:tags` - Object tags as a map (AWS/GCS only)
 
   ## Examples
 
@@ -181,6 +187,21 @@ defmodule ObjectStoreX do
         {:ok, _meta} -> :success
         {:error, :precondition_failed} -> :retry
       end
+
+      # Upload with content type
+      ObjectStoreX.put(store, "data.json", json_data, content_type: "application/json")
+
+      # Upload with attributes
+      ObjectStoreX.put(store, "report.pdf", pdf_data,
+        content_type: "application/pdf",
+        content_disposition: "attachment; filename=report.pdf",
+        cache_control: "max-age=3600"
+      )
+
+      # Upload with tags (AWS/GCS)
+      ObjectStoreX.put(store, "backup.zip", data,
+        tags: %{"environment" => "production", "backup-type" => "daily"}
+      )
   """
   @spec put(store(), path(), binary(), keyword()) ::
           :ok | {:ok, put_result()} | {:error, term()}
@@ -198,18 +219,55 @@ defmodule ObjectStoreX do
   def put(store, path, data, opts) when is_binary(data) and is_list(opts) do
     mode = Keyword.get(opts, :mode, :overwrite)
 
-    case Native.put_with_mode(store, path, data, mode) do
-      {:ok, etag, version} ->
-        {:ok, %{etag: etag, version: version}}
+    # Check if attributes are provided
+    has_attributes = Keyword.has_key?(opts, :content_type) or
+                     Keyword.has_key?(opts, :content_encoding) or
+                     Keyword.has_key?(opts, :content_disposition) or
+                     Keyword.has_key?(opts, :cache_control) or
+                     Keyword.has_key?(opts, :content_language) or
+                     Keyword.has_key?(opts, :tags)
 
-      :already_exists ->
-        {:error, :already_exists}
+    if has_attributes do
+      # Use put_with_attributes for full control
+      attributes = %ObjectStoreX.Attributes{
+        content_type: Keyword.get(opts, :content_type),
+        content_encoding: Keyword.get(opts, :content_encoding),
+        content_disposition: Keyword.get(opts, :content_disposition),
+        cache_control: Keyword.get(opts, :cache_control),
+        content_language: Keyword.get(opts, :content_language)
+      }
 
-      :precondition_failed ->
-        {:error, :precondition_failed}
+      tags = Keyword.get(opts, :tags, %{})
+               |> Map.to_list()
 
-      error ->
-        {:error, error}
+      case Native.put_with_attributes(store, path, data, mode, attributes, tags) do
+        {:ok, etag, version} ->
+          {:ok, %{etag: etag, version: version}}
+
+        :already_exists ->
+          {:error, :already_exists}
+
+        :precondition_failed ->
+          {:error, :precondition_failed}
+
+        error ->
+          {:error, error}
+      end
+    else
+      # Use simple put_with_mode for backwards compatibility
+      case Native.put_with_mode(store, path, data, mode) do
+        {:ok, etag, version} ->
+          {:ok, %{etag: etag, version: version}}
+
+        :already_exists ->
+          {:error, :already_exists}
+
+        :precondition_failed ->
+          {:error, :precondition_failed}
+
+        error ->
+          {:error, error}
+      end
     end
   rescue
     e -> {:error, Exception.message(e)}
