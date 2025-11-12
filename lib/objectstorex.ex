@@ -330,59 +330,47 @@ defmodule ObjectStoreX do
   def put(store, path, data, opts) when is_binary(data) and is_list(opts) do
     mode = Keyword.get(opts, :mode, :overwrite)
 
-    # Check if attributes are provided
-    has_attributes = Keyword.has_key?(opts, :content_type) or
-                     Keyword.has_key?(opts, :content_encoding) or
-                     Keyword.has_key?(opts, :content_disposition) or
-                     Keyword.has_key?(opts, :cache_control) or
-                     Keyword.has_key?(opts, :content_language) or
-                     Keyword.has_key?(opts, :tags)
-
-    if has_attributes do
-      # Use put_with_attributes for full control
-      attributes = %ObjectStoreX.Attributes{
-        content_type: Keyword.get(opts, :content_type),
-        content_encoding: Keyword.get(opts, :content_encoding),
-        content_disposition: Keyword.get(opts, :content_disposition),
-        cache_control: Keyword.get(opts, :cache_control),
-        content_language: Keyword.get(opts, :content_language)
-      }
-
-      tags = Keyword.get(opts, :tags, %{})
-               |> Map.to_list()
-
-      case Native.put_with_attributes(store, path, data, mode, attributes, tags) do
-        {:ok, etag, version} ->
-          {:ok, %{etag: etag, version: version}}
-
-        :already_exists ->
-          {:error, :already_exists}
-
-        :precondition_failed ->
-          {:error, :precondition_failed}
-
-        error ->
-          {:error, error}
+    result =
+      if has_attributes?(opts) do
+        put_with_attributes_internal(store, path, data, mode, opts)
+      else
+        Native.put_with_mode(store, path, data, mode)
       end
-    else
-      # Use simple put_with_mode for backwards compatibility
-      case Native.put_with_mode(store, path, data, mode) do
-        {:ok, etag, version} ->
-          {:ok, %{etag: etag, version: version}}
 
-        :already_exists ->
-          {:error, :already_exists}
-
-        :precondition_failed ->
-          {:error, :precondition_failed}
-
-        error ->
-          {:error, error}
-      end
-    end
+    normalize_put_result(result)
   rescue
     e -> {:error, Exception.message(e)}
   end
+
+  defp has_attributes?(opts) do
+    Keyword.has_key?(opts, :content_type) or
+      Keyword.has_key?(opts, :content_encoding) or
+      Keyword.has_key?(opts, :content_disposition) or
+      Keyword.has_key?(opts, :cache_control) or
+      Keyword.has_key?(opts, :content_language) or
+      Keyword.has_key?(opts, :tags)
+  end
+
+  defp put_with_attributes_internal(store, path, data, mode, opts) do
+    attributes = %ObjectStoreX.Attributes{
+      content_type: Keyword.get(opts, :content_type),
+      content_encoding: Keyword.get(opts, :content_encoding),
+      content_disposition: Keyword.get(opts, :content_disposition),
+      cache_control: Keyword.get(opts, :cache_control),
+      content_language: Keyword.get(opts, :content_language)
+    }
+
+    tags =
+      Keyword.get(opts, :tags, %{})
+      |> Map.to_list()
+
+    Native.put_with_attributes(store, path, data, mode, attributes, tags)
+  end
+
+  defp normalize_put_result({:ok, etag, version}), do: {:ok, %{etag: etag, version: version}}
+  defp normalize_put_result(:already_exists), do: {:error, :already_exists}
+  defp normalize_put_result(:precondition_failed), do: {:error, :precondition_failed}
+  defp normalize_put_result(error), do: {:error, error}
 
   @doc """
   Download an object from storage with optional conditional requests.
@@ -423,7 +411,7 @@ defmodule ObjectStoreX do
       {:ok, _empty, meta} = ObjectStoreX.get(store, "file.txt", head: true)
   """
   @spec get(store(), path(), keyword()) ::
-    {:ok, binary()} | {:ok, binary(), metadata()} | {:error, term()}
+          {:ok, binary()} | {:ok, binary(), metadata()} | {:error, term()}
   def get(store, path, opts \\ [])
 
   def get(store, path, []) do
@@ -453,12 +441,16 @@ defmodule ObjectStoreX do
         # Convert charlist to binary if needed
         binary_data = if is_list(data), do: :erlang.list_to_binary(data), else: data
         {:ok, binary_data, meta}
+
       :not_found ->
         {:error, :not_found}
+
       :not_modified ->
         {:error, :not_modified}
+
       :precondition_failed ->
         {:error, :precondition_failed}
+
       error ->
         {:error, error}
     end

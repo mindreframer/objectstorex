@@ -196,7 +196,7 @@ defmodule BackupService do
     dry_run = Keyword.get(opts, :dry_run, false)
 
     backups = list_backups(store, backup_prefix)
-    cutoff = DateTime.utc_now() |> DateTime.add(-keep_days * 86400, :second)
+    cutoff = DateTime.utc_now() |> DateTime.add(-keep_days * 86_400, :second)
 
     to_delete =
       backups

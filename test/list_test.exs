@@ -153,6 +153,7 @@ defmodule ObjectStoreX.ListTest do
                "Unexpected object: #{meta.location}"
 
         expected_content = test_data_map[meta.location]
+
         assert meta.size == byte_size(expected_content),
                "Size mismatch for #{meta.location}: expected #{byte_size(expected_content)}, got #{meta.size}"
 

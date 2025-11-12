@@ -178,19 +178,17 @@ defmodule FileUploader do
   end
 
   defp write_stream_to_file(stream, local_path, total_size, on_progress) do
-    try do
-      file = File.open!(local_path, [:write, :binary])
-      bytes_written = write_chunks(stream, file, total_size, on_progress, 0)
-      File.close(file)
+    file = File.open!(local_path, [:write, :binary])
+    bytes_written = write_chunks(stream, file, total_size, on_progress, 0)
+    File.close(file)
 
-      if bytes_written == total_size do
-        :ok
-      else
-        {:error, :incomplete_download}
-      end
-    rescue
-      e -> {:error, {:file_error, Exception.message(e)}}
+    if bytes_written == total_size do
+      :ok
+    else
+      {:error, :incomplete_download}
     end
+  rescue
+    e -> {:error, {:file_error, Exception.message(e)}}
   end
 
   defp write_chunks(stream, file, total_size, on_progress, acc) do

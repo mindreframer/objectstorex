@@ -204,29 +204,23 @@ defmodule ObjectStoreX.Examples.DistributedLock do
   def check_staleness(store, resource, max_age_seconds \\ 300, opts \\ []) do
     force_release = Keyword.get(opts, :force_release, false)
 
-    case check(store, resource) do
-      {:ok, lock_info} ->
-        current_time = System.system_time(:second)
-        lock_age = current_time - lock_info.timestamp
+    with {:ok, lock_info} <- check(store, resource) do
+      current_time = System.system_time(:second)
+      lock_age = current_time - lock_info.timestamp
 
-        if lock_age > max_age_seconds do
-          if force_release do
-            case release(store, resource) do
-              :ok -> {:ok, :released}
-              error -> error
-            end
-          else
-            {:ok, :stale}
-          end
-        else
+      cond do
+        lock_age <= max_age_seconds ->
           {:ok, :fresh}
-        end
 
-      {:error, :not_locked} ->
-        {:error, :not_locked}
+        force_release ->
+          case release(store, resource) do
+            :ok -> {:ok, :released}
+            error -> error
+          end
 
-      {:error, reason} ->
-        {:error, reason}
+        true ->
+          {:ok, :stale}
+      end
     end
   end
 
