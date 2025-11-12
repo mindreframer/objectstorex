@@ -1,4 +1,4 @@
-defmodule Objectstorex.MixProject do
+defmodule ObjectStoreX.MixProject do
   use Mix.Project
 
   @version "0.1.0"
