@@ -672,4 +672,78 @@ defmodule ObjectStoreXTest do
       assert delete_ms < 30, "DELETE took #{delete_ms}ms, expected <30ms"
     end
   end
+
+  describe "OBX002_2A: Range Reads (Vectored I/O)" do
+    setup do
+      {:ok, store} = ObjectStoreX.new(:memory)
+      # Create a test file with known content for range reads
+      # Content: "0123456789" repeated 10 times = 100 bytes
+      test_data = String.duplicate("0123456789", 10)
+      assert :ok = ObjectStoreX.put(store, "range_test.txt", test_data)
+      {:ok, store: store, test_data: test_data}
+    end
+
+    test "OBX002_2A_T1: Test single range request", %{store: store} do
+      # Read bytes 0-9 (first 10 bytes)
+      assert {:ok, [chunk]} = ObjectStoreX.get_ranges(store, "range_test.txt", [{0, 10}])
+      assert chunk == "0123456789"
+    end
+
+    test "OBX002_2A_T2: Test multiple non-contiguous ranges", %{store: store} do
+      # Read multiple ranges: bytes 0-10, 50-60, 90-100
+      assert {:ok, [chunk1, chunk2, chunk3]} =
+               ObjectStoreX.get_ranges(store, "range_test.txt", [{0, 10}, {50, 60}, {90, 100}])
+
+      assert chunk1 == "0123456789"
+      assert chunk2 == "0123456789"
+      assert chunk3 == "0123456789"
+    end
+
+    test "OBX002_2A_T3: Test ranges return correct byte sequences", %{store: store} do
+      # Read specific byte ranges and verify exact content
+      # Range 5-15 should give "56789" + "01234"
+      assert {:ok, [chunk]} = ObjectStoreX.get_ranges(store, "range_test.txt", [{5, 15}])
+      assert chunk == "5678901234"
+    end
+
+    test "OBX002_2A_T4: Test range read preserves binary data", %{store: store} do
+      # Create a file with binary data
+      binary_data = <<0, 1, 2, 3, 4, 5, 255, 254, 253, 252, 251, 250>>
+      assert :ok = ObjectStoreX.put(store, "binary_test.bin", binary_data)
+
+      # Read ranges from binary file
+      assert {:ok, [chunk1, chunk2]} =
+               ObjectStoreX.get_ranges(store, "binary_test.bin", [{0, 6}, {6, 12}])
+
+      assert chunk1 == <<0, 1, 2, 3, 4, 5>>
+      assert chunk2 == <<255, 254, 253, 252, 251, 250>>
+    end
+
+    test "OBX002_2A_T5: Test invalid range returns error", %{store: store} do
+      # Test with non-existent file
+      result = ObjectStoreX.get_ranges(store, "nonexistent.txt", [{0, 10}])
+      assert {:error, _reason} = result
+    end
+
+    test "OBX002_2A_T6: Test range beyond file size", %{store: store, test_data: test_data} do
+      # The file is 100 bytes, try to read beyond that
+      # Note: object_store behavior may vary - some providers might return partial data,
+      # others might error. We just verify we get a response without crashing.
+      file_size = byte_size(test_data)
+      assert file_size == 100
+
+      # Try reading beyond the file size
+      result = ObjectStoreX.get_ranges(store, "range_test.txt", [{0, 10}, {95, 110}])
+
+      case result do
+        {:ok, [_chunk1, chunk2]} ->
+          # If it succeeds, the second chunk should be at most 5 bytes (95-100)
+          assert byte_size(chunk2) <= 5
+
+        {:error, _reason} ->
+          # If it errors, that's also acceptable behavior
+          assert true
+      end
+    end
+  end
 end

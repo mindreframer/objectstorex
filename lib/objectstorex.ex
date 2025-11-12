@@ -252,4 +252,37 @@ defmodule ObjectStoreX do
   rescue
     e -> {:error, Exception.message(e)}
   end
+
+  @doc """
+  Fetch multiple byte ranges from an object in a single operation.
+
+  Useful for reading file headers, footers, and metadata without downloading
+  the entire file (e.g., Parquet files, video files).
+
+  ## Examples
+
+      # Read header and footer
+      {:ok, [header, footer]} = ObjectStoreX.get_ranges(store, "data.parquet", [
+        {0, 1000},           # First 1000 bytes
+        {9000, 10000}        # Bytes 9000-10000
+      ])
+
+      # Read specific sections
+      {:ok, chunks} = ObjectStoreX.get_ranges(store, "video.mp4", [
+        {0, 100},            # Header
+        {500, 600},          # Metadata
+        {1000, 2000}         # Preview section
+      ])
+  """
+  @spec get_ranges(store(), path(), [{non_neg_integer(), non_neg_integer()}]) ::
+          {:ok, [binary()]} | {:error, term()}
+  def get_ranges(store, path, ranges) when is_list(ranges) do
+    case Native.get_ranges(store, path, ranges) do
+      binaries when is_list(binaries) -> {:ok, binaries}
+      :not_found -> {:error, :not_found}
+      error -> {:error, error}
+    end
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
 end

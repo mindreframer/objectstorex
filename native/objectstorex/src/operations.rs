@@ -143,3 +143,41 @@ pub fn rename<'a>(
         Err(e) => Ok(map_error(e).to_term(env)),
     }
 }
+
+/// Fetch multiple byte ranges from an object in a single operation
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn get_ranges<'a>(
+    env: Env<'a>,
+    store: ResourceArc<StoreWrapper>,
+    path: String,
+    ranges: Vec<(u64, u64)>,
+) -> NifResult<Term<'a>> {
+    use std::ops::Range;
+
+    // Convert Vec<(u64, u64)> to Vec<Range<usize>>
+    let range_objects: Vec<Range<usize>> = ranges
+        .into_iter()
+        .map(|(start, end)| (start as usize)..(end as usize))
+        .collect();
+
+    let results = RUNTIME.block_on(async {
+        store.inner.get_ranges(&Path::from(path), &range_objects).await
+    });
+
+    match results {
+        Ok(bytes_vec) => {
+            // Convert Vec<Bytes> to Vec<Binary> for Elixir
+            let binaries: Vec<Term> = bytes_vec
+                .into_iter()
+                .map(|bytes| {
+                    let mut binary = OwnedBinary::new(bytes.len()).unwrap();
+                    binary.as_mut_slice().copy_from_slice(&bytes);
+                    binary.release(env).encode(env)
+                })
+                .collect();
+
+            Ok(binaries.encode(env))
+        }
+        Err(e) => Ok(map_error(e).to_term(env)),
+    }
+}
