@@ -1,0 +1,205 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  MIX_ENV: test
+  RUST_BACKTRACE: 1
+
+jobs:
+  test:
+    name: Test (Elixir ${{matrix.elixir}} OTP ${{matrix.otp}})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        elixir: ['1.14', '1.15', '1.16', '1.17']
+        otp: ['25', '26', '27']
+        exclude:
+          # Elixir 1.14 doesn't support OTP 27
+          - elixir: '1.14'
+            otp: '27'
+          # Elixir 1.17 requires OTP 26+
+          - elixir: '1.17'
+            otp: '25'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{matrix.elixir}}
+          otp-version: ${{matrix.otp}}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Restore Rust cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            native/objectstorex/target/
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile (warnings as errors)
+        run: mix compile --warnings-as-errors
+
+      - name: Run tests
+        run: mix test --exclude cloud
+
+      - name: Check formatting
+        run: mix format --check-formatted
+        if: matrix.elixir == '1.17' && matrix.otp == '27'
+
+      - name: Run Credo
+        run: mix credo --strict
+        if: matrix.elixir == '1.17' && matrix.otp == '27'
+
+      - name: Run Dialyzer
+        run: mix dialyzer
+        if: matrix.elixir == '1.17' && matrix.otp == '27'
+
+      - name: Generate coverage
+        run: mix coveralls.json
+        if: matrix.elixir == '1.17' && matrix.otp == '27'
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: matrix.elixir == '1.17' && matrix.otp == '27'
+        with:
+          files: ./cover/excoveralls.json
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  test-rust:
+    name: Test Rust NIFs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Restore Rust cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            native/objectstorex/target/
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+
+      - name: Run tests
+        working-directory: native/objectstorex
+        run: cargo test
+
+      - name: Run clippy
+        working-directory: native/objectstorex
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Check formatting
+        working-directory: native/objectstorex
+        run: cargo fmt --check
+
+  test-cloud:
+    name: Cloud Provider Tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: [test, test-rust]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.17'
+          otp-version: '27'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: deps-${{ runner.os }}-27-1.17-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            deps-${{ runner.os }}-27-1.17-
+
+      - name: Restore Rust cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            native/objectstorex/target/
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile
+
+      - name: Test S3 (if configured)
+        if: vars.HAS_S3_CREDENTIALS == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          TEST_S3_BUCKET: ${{ secrets.TEST_S3_BUCKET }}
+          TEST_S3_REGION: ${{ secrets.TEST_S3_REGION }}
+        run: mix test --only s3
+
+      - name: Test Azure (if configured)
+        if: vars.HAS_AZURE_CREDENTIALS == 'true'
+        env:
+          AZURE_STORAGE_ACCOUNT_NAME: ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }}
+          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+          TEST_AZURE_CONTAINER: ${{ secrets.TEST_AZURE_CONTAINER }}
+        run: mix test --only azure
+
+      - name: Test GCS (if configured)
+        if: vars.HAS_GCS_CREDENTIALS == 'true'
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          TEST_GCS_BUCKET: ${{ secrets.TEST_GCS_BUCKET }}
+        run: mix test --only gcs
