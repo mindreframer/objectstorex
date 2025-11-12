@@ -7,6 +7,7 @@ mod builders;
 mod errors;
 mod operations;
 mod store;
+mod streaming;
 
 use store::StoreWrapper;
 
