@@ -168,4 +168,92 @@ defmodule ObjectStoreX.Stream do
   rescue
     e -> {:error, Exception.message(e)}
   end
+
+  @doc """
+  List objects as a stream with automatic pagination.
+
+  Returns a stream that yields object metadata maps. The stream automatically
+  handles pagination and will continue until all objects matching the prefix
+  have been returned.
+
+  ## Options
+
+  * `:prefix` - Optional prefix to filter objects (default: nil, lists all objects)
+  * `:timeout` - Timeout in milliseconds for receiving each object (default: 30_000)
+
+  ## Examples
+
+      # List all objects with prefix
+      ObjectStoreX.Stream.list_stream(store, prefix: "data/2025/")
+      |> Stream.map(& &1.location)
+      |> Enum.take(100)
+
+      # Filter by size
+      ObjectStoreX.Stream.list_stream(store, prefix: "logs/")
+      |> Stream.filter(fn meta -> meta.size > 1_000_000 end)
+      |> Stream.map(& &1.location)
+      |> Enum.to_list()
+
+      # Process in batches
+      ObjectStoreX.Stream.list_stream(store)
+      |> Stream.chunk_every(100)
+      |> Stream.each(&process_batch/1)
+      |> Stream.run()
+
+  ## Metadata Structure
+
+  Each object metadata map contains:
+
+  * `:location` - String path of the object
+  * `:size` - Size in bytes
+  * `:last_modified` - ISO8601 timestamp string
+  * `:etag` - Optional ETag string
+  * `:version` - Optional version string
+
+  ## Error Handling
+
+  If an error occurs during listing, the stream will raise an exception.
+  """
+  @spec list_stream(store(), keyword()) :: Enumerable.t()
+  def list_stream(store, opts \\ []) do
+    prefix = Keyword.get(opts, :prefix)
+    timeout = Keyword.get(opts, :timeout, 30_000)
+
+    Stream.resource(
+      fn -> start_list(store, prefix) end,
+      fn list_id -> receive_object(list_id, timeout) end,
+      fn _list_id -> :ok end
+    )
+  end
+
+  # Start the list stream by calling the NIF
+  defp start_list(store, prefix) do
+    case Native.start_list_stream(store, prefix, self()) do
+      {:ok, list_id} ->
+        list_id
+
+      {:error, reason} ->
+        raise "List stream failed to start: #{inspect(reason)}"
+    end
+  end
+
+  # Receive an object metadata from the stream
+  defp receive_object(list_id, timeout) do
+    receive do
+      {:object, ^list_id, meta} ->
+        # Return the metadata and continue with the list_id
+        {[meta], list_id}
+
+      {:done, ^list_id} ->
+        # Stream is complete
+        {:halt, list_id}
+
+      {:error, ^list_id, reason} ->
+        # Error occurred, raise exception
+        raise "List stream error: #{reason}"
+    after
+      timeout ->
+        raise "List stream timeout after #{timeout}ms"
+    end
+  end
 end

@@ -32,4 +32,8 @@ defmodule ObjectStoreX.Native do
   def upload_chunk(_session, _chunk), do: :erlang.nif_error(:nif_not_loaded)
   def complete_upload(_session), do: :erlang.nif_error(:nif_not_loaded)
   def abort_upload(_session), do: :erlang.nif_error(:nif_not_loaded)
+
+  # List operations
+  def start_list_stream(_store, _prefix, _receiver_pid), do: :erlang.nif_error(:nif_not_loaded)
+  def list_with_delimiter(_store, _prefix), do: :erlang.nif_error(:nif_not_loaded)
 end

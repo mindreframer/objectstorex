@@ -11,4 +11,5 @@ rustler::atoms! {
     // Streaming atoms
     chunk,
     done,
+    object,
 }
