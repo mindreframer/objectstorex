@@ -90,9 +90,12 @@ defmodule ObjectStoreX.ErrorHandlingTest do
   describe "OBX001_6A_T5: Error handling with rescue blocks" do
     test "new/2 handles invalid provider gracefully" do
       # This should return an error, not crash
+      # Use a dynamic value to bypass compile-time type checking
+      invalid_provider = String.to_atom("invalid_provider")
+
       result =
         try do
-          ObjectStoreX.new(:invalid_provider, [])
+          ObjectStoreX.new(invalid_provider, [])
         rescue
           FunctionClauseError -> {:error, :invalid_provider}
           e -> {:error, Exception.message(e)}
