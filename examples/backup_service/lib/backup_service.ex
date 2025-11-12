@@ -242,16 +242,21 @@ defmodule BackupService do
   end
 
   defp list_files(dir, exclude) do
-    files =
-      Path.wildcard("#{dir}/**/*")
-      |> Enum.filter(&File.regular?/1)
-      |> Enum.reject(fn path ->
-        Enum.any?(exclude, fn pattern ->
-          String.contains?(path, pattern)
+    # Validate directory exists
+    unless File.dir?(dir) do
+      {:error, {:not_a_directory, dir}}
+    else
+      files =
+        Path.wildcard("#{dir}/**/*")
+        |> Enum.filter(&File.regular?/1)
+        |> Enum.reject(fn path ->
+          Enum.any?(exclude, fn pattern ->
+            String.contains?(path, pattern)
+          end)
         end)
-      end)
 
-    {:ok, files}
+      {:ok, files}
+    end
   rescue
     e -> {:error, {:list_files, Exception.message(e)}}
   end
@@ -356,7 +361,16 @@ defmodule BackupService do
 
   defp load_manifest(store, backup_path) do
     case ObjectStoreX.get(store, "#{backup_path}/manifest.json") do
+      {:ok, json} ->
+        # Handle 2-tuple return (no metadata)
+        manifest =
+          Jason.decode!(json, keys: :atoms)
+          |> Map.update!(:timestamp, &DateTime.from_iso8601(&1) |> elem(1))
+
+        {:ok, manifest}
+
       {:ok, json, _meta} ->
+        # Handle 3-tuple return (with metadata)
         manifest =
           Jason.decode!(json, keys: :atoms)
           |> Map.update!(:timestamp, &DateTime.from_iso8601(&1) |> elem(1))
@@ -404,7 +418,19 @@ defmodule BackupService do
 
   defp download_file(store, remote_path, local_path, compressed) do
     case ObjectStoreX.get(store, remote_path) do
+      {:ok, data} ->
+        # Handle 2-tuple return (no metadata)
+        data =
+          if compressed do
+            :zlib.gunzip(data)
+          else
+            data
+          end
+
+        File.write(local_path, data)
+
       {:ok, data, _meta} ->
+        # Handle 3-tuple return (with metadata)
         data =
           if compressed do
             :zlib.gunzip(data)

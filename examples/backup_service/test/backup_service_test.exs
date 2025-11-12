@@ -55,7 +55,7 @@ defmodule BackupServiceTest do
     assert String.length(backup_id) > 0
 
     # Verify manifest exists
-    assert {:ok, _data, _meta} = ObjectStoreX.get(store, "test-backups/#{backup_id}/manifest.json")
+    assert {:ok, _data} = ObjectStoreX.get(store, "test-backups/#{backup_id}/manifest.json")
   end
 
   @tag :OBX004_3A_T8
