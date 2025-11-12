@@ -645,3 +645,68 @@ pub fn put_with_attributes<'a>(
         Err(e) => Ok(map_error(e).to_term(env)),
     }
 }
+
+/// Copy an object only if the destination doesn't exist (atomic where supported)
+///
+/// Provider support:
+/// - Azure: Native atomic copy_if_not_exists
+/// - GCS: Native atomic copy_if_not_exists
+/// - Local/Memory: Atomic via filesystem operations
+/// - S3: Not supported (returns :not_supported)
+///
+/// For S3, use a manual check-then-copy pattern in Elixir
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn copy_if_not_exists<'a>(
+    env: Env<'a>,
+    store: ResourceArc<StoreWrapper>,
+    from: String,
+    to: String,
+) -> NifResult<Term<'a>> {
+    match RUNTIME.block_on(async {
+        store
+            .inner
+            .copy_if_not_exists(&Path::from(from), &Path::from(to))
+            .await
+    }) {
+        Ok(_) => Ok(atoms::ok().to_term(env)),
+        Err(e) => Ok(map_error(e).to_term(env)),
+    }
+}
+
+/// Rename an object only if the destination doesn't exist (atomic where supported)
+///
+/// This is implemented as copy_if_not_exists followed by delete of the source.
+/// The operation is only atomic if the underlying provider supports atomic copy_if_not_exists.
+///
+/// Provider support:
+/// - Azure: Atomic
+/// - GCS: Atomic
+/// - Local/Memory: Atomic
+/// - S3: Not supported (returns :not_supported)
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn rename_if_not_exists<'a>(
+    env: Env<'a>,
+    store: ResourceArc<StoreWrapper>,
+    from: String,
+    to: String,
+) -> NifResult<Term<'a>> {
+    let from_path = Path::from(from.clone());
+    let to_path = Path::from(to);
+
+    // First try to copy_if_not_exists
+    match RUNTIME.block_on(async {
+        store
+            .inner
+            .copy_if_not_exists(&from_path, &to_path)
+            .await
+    }) {
+        Ok(_) => {
+            // Copy succeeded, now delete the source
+            match RUNTIME.block_on(async { store.inner.delete(&from_path).await }) {
+                Ok(_) => Ok(atoms::ok().to_term(env)),
+                Err(e) => Ok(map_error(e).to_term(env)),
+            }
+        }
+        Err(e) => Ok(map_error(e).to_term(env)),
+    }
+}
