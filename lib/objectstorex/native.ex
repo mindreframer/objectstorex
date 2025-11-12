@@ -5,7 +5,7 @@ defmodule ObjectStoreX.Native do
   use Rustler, otp_app: :objectstorex, crate: "objectstorex"
 
   # Provider builders
-  def new_s3(_bucket, _region, _access_key_id, _secret_access_key),
+  def new_s3(_bucket, _region, _access_key_id, _secret_access_key, _endpoint),
     do: :erlang.nif_error(:nif_not_loaded)
 
   def new_azure(_account, _container, _access_key), do: :erlang.nif_error(:nif_not_loaded)

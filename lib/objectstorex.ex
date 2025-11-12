@@ -168,6 +168,15 @@ defmodule ObjectStoreX do
         secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY")
       )
 
+      # S3-compatible (Wasabi, MinIO, Cloudflare R2)
+      {:ok, store} = ObjectStoreX.new(:s3,
+        bucket: "my-bucket",
+        region: "eu-central-1",
+        endpoint: "https://s3.eu-central-1.wasabisys.com",
+        access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
+        secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY")
+      )
+
       # Azure
       {:ok, store} = ObjectStoreX.new(:azure,
         account: "myaccount",
@@ -195,8 +204,9 @@ defmodule ObjectStoreX do
     region = Keyword.fetch!(opts, :region)
     access_key_id = Keyword.get(opts, :access_key_id)
     secret_access_key = Keyword.get(opts, :secret_access_key)
+    endpoint = Keyword.get(opts, :endpoint)
 
-    case Native.new_s3(bucket, region, access_key_id, secret_access_key) do
+    case Native.new_s3(bucket, region, access_key_id, secret_access_key, endpoint) do
       store when is_reference(store) -> {:ok, store}
       error -> {:error, error}
     end
