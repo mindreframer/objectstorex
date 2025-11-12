@@ -1,10 +1,14 @@
 # ObjectStoreX
 
-Unified object storage for Elixir with advanced features like Compare-And-Swap, conditional operations, and distributed locking support.
+[![Hex.pm](https://img.shields.io/hexpm/v/objectstorex.svg)](https://hex.pm/packages/objectstorex)
+[![Documentation](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/objectstorex)
+[![CI](https://img.shields.io/github/workflow/status/yourorg/objectstorex/CI)](https://github.com/yourorg/objectstorex/actions)
+[![Coverage](https://img.shields.io/codecov/c/github/yourorg/objectstorex)](https://codecov.io/gh/yourorg/objectstorex)
+[![License](https://img.shields.io/hexpm/l/objectstorex.svg)](https://github.com/yourorg/objectstorex/blob/main/LICENSE)
 
-ObjectStoreX provides a consistent API across multiple cloud storage providers (AWS S3, Azure Blob, GCS) and local storage, with built-in support for optimistic concurrency control, conditional operations, and distributed systems patterns.
+**Unified object storage for Elixir** with production-ready features like Compare-And-Swap (CAS), conditional operations, streaming, and comprehensive error handling.
 
-Built on top of the high-performance Rust [`object_store`](https://github.com/apache/arrow-rs/tree/master/object_store) crate via Rustler NIFs.
+ObjectStoreX provides a **consistent API** across multiple cloud storage providers (AWS S3, Azure Blob Storage, Google Cloud Storage) and local storage, powered by the battle-tested Rust [`object_store`](https://github.com/apache/arrow-rs/tree/master/object_store) library via Rustler NIFs for near-native performance.
 
 ## Features
 
@@ -343,6 +347,16 @@ Legend:
 - ❌ Not supported
 
 ## Documentation
+
+### Guides
+
+- **[Getting Started](guides/getting_started.md)** - Installation and basic usage
+- **[Configuration](guides/configuration.md)** - Provider-specific configuration options
+- **[Streaming](guides/streaming.md)** - Efficient handling of large files
+- **[Distributed Systems](guides/distributed_systems.md)** - Locks, CAS, and caching patterns
+- **[Error Handling](guides/error_handling.md)** - Comprehensive error handling and retry strategies
+
+### API Reference
 
 Full API documentation is available at [HexDocs](https://hexdocs.pm/objectstorex).
 

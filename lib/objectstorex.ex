@@ -1,45 +1,146 @@
 defmodule ObjectStoreX do
   @moduledoc """
-  Unified object storage for AWS S3, Azure Blob, GCS, and local filesystem.
+  Unified object storage for AWS S3, Azure Blob Storage, Google Cloud Storage,
+  and local filesystem.
 
-  Provides a consistent API across multiple cloud storage providers and local storage.
-  Built on top of the Rust `object_store` crate via Rustler NIFs.
+  ObjectStoreX provides a consistent API across multiple cloud storage providers,
+  powered by the battle-tested Rust [object_store](https://docs.rs/object_store)
+  library via Rustler NIFs for near-native performance.
+
+  ## Features
+
+  - **Multi-provider**: S3, Azure, GCS, Local filesystem, In-memory
+  - **Streaming**: Efficient large file uploads/downloads with `ObjectStoreX.Stream`
+  - **Atomic operations**: Create-only, Compare-And-Swap (CAS), conditional operations
+  - **HTTP-style caching**: ETag-based conditional requests (If-Match, If-None-Match)
+  - **Bulk operations**: Delete many objects efficiently with automatic batching
+  - **Range reads**: Fetch specific byte ranges without downloading entire files
+  - **Rich metadata**: Content-type, custom metadata, cache control, tags
+  - **Production-ready**: Comprehensive error handling with retryable error detection
+
+  ## Installation
+
+  Add `objectstorex` to your `mix.exs`:
+
+      def deps do
+        [
+          {:objectstorex, "~> 0.1.0"}
+        ]
+      end
+
+  ## Quick Start
+
+      # Create a store (S3 example)
+      {:ok, store} = ObjectStoreX.new(:s3,
+        bucket: "my-bucket",
+        region: "us-east-1"
+      )
+
+      # Upload an object
+      :ok = ObjectStoreX.put(store, "hello.txt", "Hello, World!")
+
+      # Download an object
+      {:ok, data} = ObjectStoreX.get(store, "hello.txt")
+
+      # List objects with streaming
+      ObjectStoreX.Stream.list_stream(store, prefix: "data/")
+      |> Enum.take(10)
+
+      # Delete an object
+      :ok = ObjectStoreX.delete(store, "hello.txt")
 
   ## Supported Providers
 
-  - `:s3` - Amazon S3
-  - `:azure` - Azure Blob Storage
-  - `:gcs` - Google Cloud Storage
-  - `:local` - Local filesystem
-  - `:memory` - In-memory storage (for testing)
+  - **`:s3`** - Amazon S3, MinIO, Cloudflare R2, and S3-compatible services
+  - **`:azure`** - Azure Blob Storage
+  - **`:gcs`** - Google Cloud Storage
+  - **`:local`** - Local filesystem
+  - **`:memory`** - In-memory storage (for testing)
 
-  ## Example
+  See `new/2` for provider-specific configuration options.
 
-      # Create an in-memory store for testing
-      {:ok, store} = ObjectStoreX.new(:memory)
+  ## Use Cases
 
-      # Store some data
-      :ok = ObjectStoreX.put(store, "test.txt", "Hello, World!")
+  ### File Storage
+  Upload and download files to cloud storage with automatic retries and error handling.
 
-      # Retrieve it
-      {:ok, data} = ObjectStoreX.get(store, "test.txt")
-      # => "Hello, World!"
+  ### Data Lakes
+  Store analytics data with partitioning and efficient listing:
 
-      # Get metadata
-      {:ok, meta} = ObjectStoreX.head(store, "test.txt")
-      # => %{location: "test.txt", size: 13, ...}
+      ObjectStoreX.Stream.list_stream(store, prefix: "data/2025/01/")
+      |> Stream.filter(fn meta -> meta.size > 1_000_000 end)
+      |> Enum.to_list()
 
-      # Delete it
-      :ok = ObjectStoreX.delete(store, "test.txt")
+  ### Distributed Locks
+  Use create-only writes for coordination:
+
+      case ObjectStoreX.put(store, "lock.txt", "locked", mode: :create) do
+        {:ok, _meta} -> :acquired
+        {:error, :already_exists} -> :already_locked
+      end
+
+  ### HTTP Caching
+  ETag-based cache validation:
+
+      case ObjectStoreX.get(store, "file.txt", if_none_match: cached_etag) do
+        {:ok, data, meta} -> {:modified, data, meta}
+        {:error, :not_modified} -> :use_cache
+      end
+
+  ### Optimistic Locking
+  Compare-and-swap for concurrent updates:
+
+      {:ok, meta} = ObjectStoreX.head(store, "counter.json")
+      case ObjectStoreX.put(store, "counter.json", new_data,
+                            mode: {:update, %{etag: meta[:etag]}}) do
+        {:ok, _meta} -> :success
+        {:error, :precondition_failed} -> :retry
+      end
+
+  ### Large File Handling
+  Stream large files without loading into memory:
+
+      File.stream!("large-file.bin", [], 10_485_760)  # 10MB chunks
+      |> ObjectStoreX.Stream.upload(store, "backup.bin")
 
   ## Error Handling
 
-  All functions return tagged tuples for error handling:
+  All functions return tagged tuples for pattern matching:
   - `{:ok, result}` on success
   - `{:error, reason}` on failure
 
-  For detailed information about error types and handling patterns,
+  Error reasons are descriptive atoms:
+
+      case ObjectStoreX.get(store, "file.txt") do
+        {:ok, data} -> process(data)
+        {:error, :not_found} -> :missing
+        {:error, :permission_denied} -> :unauthorized
+        {:error, :timeout} -> :retry_later
+      end
+
+  For detailed information about error types, context, and retry strategies,
   see `ObjectStoreX.Error`.
+
+  ## Architecture
+
+  ObjectStoreX uses Rustler NIFs to call the Rust `object_store` library,
+  providing near-native performance with memory-safe operations. The Rust
+  library handles all provider-specific protocols and optimizations.
+
+  ## Documentation
+
+  - Getting Started: See `guides/getting_started.md`
+  - Configuration: See `guides/configuration.md`
+  - Streaming: See `ObjectStoreX.Stream` and `guides/streaming.md`
+  - Error Handling: See `ObjectStoreX.Error` and `guides/error_handling.md`
+  - Distributed Systems: See `guides/distributed_systems.md`
+
+  ## Links
+
+  - [Hex.pm](https://hex.pm/packages/objectstorex)
+  - [Documentation](https://hexdocs.pm/objectstorex)
+  - [GitHub](https://github.com/yourorg/objectstorex)
+  - [Changelog](https://github.com/yourorg/objectstorex/blob/main/CHANGELOG.md)
   """
 
   alias ObjectStoreX.Native
@@ -139,6 +240,16 @@ defmodule ObjectStoreX do
     e -> {:error, Exception.message(e)}
   end
 
+  @doc """
+  Create an in-memory storage provider (shorthand for testing).
+
+  This is a convenience function equivalent to `new(:memory, [])`.
+
+  ## Examples
+
+      {:ok, store} = ObjectStoreX.new(:memory)
+  """
+  @spec new(:memory) :: {:ok, store()} | {:error, term()}
   def new(:memory) do
     case Native.new_memory() do
       store when is_reference(store) -> {:ok, store}
