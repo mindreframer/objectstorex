@@ -31,6 +31,15 @@ defmodule ObjectStoreX do
 
       # Delete it
       :ok = ObjectStoreX.delete(store, "test.txt")
+
+  ## Error Handling
+
+  All functions return tagged tuples for error handling:
+  - `{:ok, result}` on success
+  - `{:error, reason}` on failure
+
+  For detailed information about error types and handling patterns,
+  see `ObjectStoreX.Errors`.
   """
 
   alias ObjectStoreX.Native
