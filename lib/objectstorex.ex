@@ -321,4 +321,46 @@ defmodule ObjectStoreX do
   rescue
     e -> {:error, Exception.message(e)}
   end
+
+  @doc """
+  List objects with delimiter, returning objects and common prefixes separately.
+
+  This simulates a directory structure by grouping objects by common prefixes.
+  The delimiter is always "/" (forward slash).
+
+  ## Examples
+
+      {:ok, objects, prefixes} = ObjectStoreX.list_with_delimiter(store, prefix: "data/")
+
+      # objects = [%{location: "data/file.txt", ...}]
+      # prefixes = ["data/2024/", "data/2025/"]
+
+      # List root level
+      {:ok, objects, prefixes} = ObjectStoreX.list_with_delimiter(store)
+
+  ## Options
+
+  * `:prefix` - Optional prefix to filter objects (default: nil)
+
+  ## Returns
+
+  A tuple of `{:ok, objects, prefixes}` where:
+  - `objects` is a list of metadata maps for objects at the current level
+  - `prefixes` is a list of string prefixes (subdirectories)
+  """
+  @spec list_with_delimiter(store(), keyword()) ::
+          {:ok, [metadata()], [String.t()]} | {:error, term()}
+  def list_with_delimiter(store, opts \\ []) do
+    prefix = Keyword.get(opts, :prefix)
+
+    case Native.list_with_delimiter(store, prefix) do
+      {objects, prefixes} when is_list(objects) and is_list(prefixes) ->
+        {:ok, objects, prefixes}
+
+      error ->
+        {:error, error}
+    end
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
 end

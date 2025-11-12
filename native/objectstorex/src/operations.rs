@@ -217,3 +217,92 @@ pub fn delete_many<'a>(
     // Return tuple (succeeded_count, failed_list)
     Ok((succeeded, failed).encode(env))
 }
+
+/// Helper function to encode ObjectMeta to an Elixir map
+fn encode_object_meta_for_list<'a>(env: Env<'a>, meta: &object_store::ObjectMeta) -> Term<'a> {
+    use rustler::types::atom::Atom;
+    use rustler::types::map;
+
+    let map = map::map_new(env);
+
+    let map = map
+        .map_put(
+            Atom::from_str(env, "location").unwrap().to_term(env),
+            meta.location.to_string().encode(env),
+        )
+        .unwrap();
+
+    let map = map
+        .map_put(
+            Atom::from_str(env, "size").unwrap().to_term(env),
+            meta.size.encode(env),
+        )
+        .unwrap();
+
+    let map = map
+        .map_put(
+            Atom::from_str(env, "last_modified")
+                .unwrap()
+                .to_term(env),
+            meta.last_modified.to_string().encode(env),
+        )
+        .unwrap();
+
+    let map = if let Some(ref etag) = meta.e_tag {
+        map.map_put(
+            Atom::from_str(env, "etag").unwrap().to_term(env),
+            etag.encode(env),
+        )
+        .unwrap()
+    } else {
+        map
+    };
+
+    let map = map
+        .map_put(
+            Atom::from_str(env, "version").unwrap().to_term(env),
+            meta.version.as_ref().map(|v| v.to_string()).encode(env),
+        )
+        .unwrap();
+
+    map
+}
+
+/// List objects with delimiter, returning objects and common prefixes separately
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn list_with_delimiter<'a>(
+    env: Env<'a>,
+    store: ResourceArc<StoreWrapper>,
+    prefix: Option<String>,
+) -> NifResult<Term<'a>> {
+    let prefix_path = prefix.map(Path::from);
+
+    let result = RUNTIME.block_on(async {
+        store
+            .inner
+            .list_with_delimiter(prefix_path.as_ref())
+            .await
+    });
+
+    match result {
+        Ok(list_result) => {
+            // Convert objects to Elixir terms
+            let objects: Vec<Term> = list_result
+                .objects
+                .iter()
+                .map(|meta| encode_object_meta_for_list(env, meta))
+                .collect();
+
+            // Convert prefixes to strings
+            let prefixes: Vec<String> = list_result
+                .common_prefixes
+                .iter()
+                .map(|p| p.to_string())
+                .collect();
+
+            // Return tuple (objects, prefixes)
+            Ok((objects, prefixes).encode(env))
+        }
+        Err(e) => Ok(map_error(e).to_term(env)),
+    }
+}
