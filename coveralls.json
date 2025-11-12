@@ -5,7 +5,8 @@
   },
   "skip_files": [
     "test/",
-    "examples/"
+    "examples/",
+    "lib/objectstorex/native.ex"
   ],
   "terminal_options": {
     "file_column_width": 40
