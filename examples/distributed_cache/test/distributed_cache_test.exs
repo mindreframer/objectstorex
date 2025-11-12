@@ -10,7 +10,7 @@ defmodule DistributedCacheTest do
     File.mkdir_p!(storage_dir)
 
     # Create a test store
-    {:ok, store} = ObjectStoreX.new(:local, root: storage_dir)
+    {:ok, store} = ObjectStoreX.new(:local, path: storage_dir)
 
     # Start the cache with a unique name for this test
     cache_name = :"cache_#{:erlang.unique_integer([:positive])}"
@@ -65,7 +65,7 @@ defmodule DistributedCacheTest do
     assert :ok = DistributedCache.put(cache, "put_key", "put_value")
 
     # Verify it's in storage
-    assert {:ok, value, _meta} = ObjectStoreX.get(store, "put_key")
+    assert {:ok, value} = ObjectStoreX.get(store, "put_key")
     assert value == "put_value"
 
     # Verify it's cached (get should be fast)

@@ -16,7 +16,7 @@ defmodule FileUploaderTest do
     File.mkdir_p!(storage_dir)
 
     # Create a test store
-    {:ok, store} = ObjectStoreX.new(:local, root: storage_dir)
+    {:ok, store} = ObjectStoreX.new(:local, path: storage_dir)
 
     on_exit(fn ->
       File.rm_rf(upload_dir)
@@ -48,7 +48,7 @@ defmodule FileUploaderTest do
     assert :ok = FileUploader.upload_file(store, test_file, "test.txt")
 
     # Verify the file was uploaded
-    assert {:ok, data, _meta} = ObjectStoreX.get(store, "test.txt")
+    assert {:ok, data} = ObjectStoreX.get(store, "test.txt")
     assert data == "Hello, World!"
   end
 
@@ -60,8 +60,6 @@ defmodule FileUploaderTest do
     File.write!(test_file, data)
 
     # Track progress
-    progress_calls = []
-
     progress_tracker = fn bytes, total ->
       send(self(), {:progress, bytes, total})
     end

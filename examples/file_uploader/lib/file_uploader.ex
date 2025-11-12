@@ -105,12 +105,15 @@ defmodule FileUploader do
   def download_file(store, remote_path, local_path, opts \\ []) do
     on_progress = Keyword.get(opts, :on_progress, fn _, _ -> :ok end)
 
-    with {:ok, stream, metadata} <- StoreStream.download(store, remote_path),
-         total_size = metadata.size,
-         :ok <- write_stream_to_file(stream, local_path, total_size, on_progress) do
-      :ok
-    else
-      {:error, reason} -> {:error, reason}
+    # First get metadata to know the total size
+    case ObjectStoreX.head(store, remote_path) do
+      {:ok, metadata} ->
+        stream = StoreStream.download(store, remote_path)
+        total_size = metadata.size
+        write_stream_to_file(stream, local_path, total_size, on_progress)
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
