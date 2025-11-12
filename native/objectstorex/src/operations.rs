@@ -184,3 +184,36 @@ pub fn get_ranges<'a>(
         Err(e) => Ok(map_error(e).to_term(env)),
     }
 }
+
+/// Delete multiple objects in bulk with automatic batching
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn delete_many<'a>(
+    env: Env<'a>,
+    store: ResourceArc<StoreWrapper>,
+    paths: Vec<String>,
+) -> NifResult<Term<'a>> {
+    use futures::stream::{self, StreamExt};
+
+    // Create a stream of paths
+    let path_stream = stream::iter(paths.into_iter().map(|p| Ok(Path::from(p)))).boxed();
+
+    // Call delete_stream to delete all objects
+    let delete_stream = store.inner.delete_stream(path_stream);
+
+    // Collect results
+    let results = RUNTIME.block_on(async { delete_stream.collect::<Vec<_>>().await });
+
+    // Count successes and collect failures
+    let mut succeeded = 0usize;
+    let mut failed = Vec::new();
+
+    for (idx, result) in results.into_iter().enumerate() {
+        match result {
+            Ok(_) => succeeded += 1,
+            Err(e) => failed.push((idx, format!("{}", e))),
+        }
+    }
+
+    // Return tuple (succeeded_count, failed_list)
+    Ok((succeeded, failed).encode(env))
+}

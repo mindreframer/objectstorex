@@ -285,4 +285,40 @@ defmodule ObjectStoreX do
   rescue
     e -> {:error, Exception.message(e)}
   end
+
+  @doc """
+  Delete multiple objects in bulk with automatic batching.
+
+  Provider-specific batching:
+  - S3: Up to 1000 objects per request
+  - Azure: Individual deletes (parallelized)
+  - GCS: Batch API (up to 100 objects per request)
+
+  ## Examples
+
+      # Delete many objects
+      paths = ["file1.txt", "file2.txt", "file3.txt"]
+      {:ok, 3, []} = ObjectStoreX.delete_many(store, paths)
+
+      # Handle partial failures
+      result = ObjectStoreX.delete_many(store, paths)
+      case result do
+        {:ok, succeeded, failed} ->
+          IO.puts("Deleted: \#{succeeded}, Failed: \#{length(failed)}")
+        {:error, reason} ->
+          IO.puts("Error: \#{reason}")
+      end
+  """
+  @spec delete_many(store(), [path()]) :: {:ok, non_neg_integer(), list()} | {:error, term()}
+  def delete_many(store, paths) when is_list(paths) do
+    case Native.delete_many(store, paths) do
+      {succeeded, failed} when is_integer(succeeded) and is_list(failed) ->
+        {:ok, succeeded, failed}
+
+      error ->
+        {:error, error}
+    end
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
 end
