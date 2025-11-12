@@ -25,3 +25,4 @@ objectstorex-*.tar
 
 # Dialyzer PLT files (build artifacts)
 /priv/plts/
+/priv/native/
