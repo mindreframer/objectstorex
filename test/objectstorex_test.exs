@@ -368,4 +368,50 @@ defmodule ObjectStoreXTest do
       refute File.exists?(file_path)
     end
   end
+
+  describe "OBX001_4A: Memory Provider Tests" do
+    test "OBX001_4A_T5: memory store creation" do
+      assert {:ok, store} = ObjectStoreX.new(:memory)
+      assert is_reference(store)
+    end
+
+    test "OBX001_4A_T6: memory put/get/delete in-memory" do
+      {:ok, store} = ObjectStoreX.new(:memory)
+
+      # Test put
+      data = "in-memory data"
+      assert :ok = ObjectStoreX.put(store, "memory.txt", data)
+
+      # Test get
+      assert {:ok, ^data} = ObjectStoreX.get(store, "memory.txt")
+
+      # Test delete
+      assert :ok = ObjectStoreX.delete(store, "memory.txt")
+      assert {:error, :not_found} = ObjectStoreX.get(store, "memory.txt")
+    end
+
+    test "OBX001_4A_T7: memory isolation between stores" do
+      # Create two separate in-memory stores
+      {:ok, store1} = ObjectStoreX.new(:memory)
+      {:ok, store2} = ObjectStoreX.new(:memory)
+
+      # Put data in store1
+      data1 = "store1 data"
+      assert :ok = ObjectStoreX.put(store1, "isolation.txt", data1)
+
+      # Verify data is in store1
+      assert {:ok, ^data1} = ObjectStoreX.get(store1, "isolation.txt")
+
+      # Verify data is NOT in store2 (isolation)
+      assert {:error, :not_found} = ObjectStoreX.get(store2, "isolation.txt")
+
+      # Put different data in store2
+      data2 = "store2 data"
+      assert :ok = ObjectStoreX.put(store2, "isolation.txt", data2)
+
+      # Verify both stores have their own data
+      assert {:ok, ^data1} = ObjectStoreX.get(store1, "isolation.txt")
+      assert {:ok, ^data2} = ObjectStoreX.get(store2, "isolation.txt")
+    end
+  end
 end
