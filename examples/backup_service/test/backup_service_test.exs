@@ -23,7 +23,7 @@ defmodule BackupServiceTest do
     File.write!(Path.join(subdir, "file3.txt"), "Content 3")
 
     # Create a test store
-    {:ok, store} = ObjectStoreX.new(:local, root: storage_dir)
+    {:ok, store} = ObjectStoreX.new(:local, path: storage_dir)
 
     on_exit(fn ->
       File.rm_rf(source_dir)

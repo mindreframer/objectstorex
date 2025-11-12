@@ -746,4 +746,68 @@ defmodule ObjectStoreXTest do
       end
     end
   end
+
+  describe "OBX004_6A: Release & Publication Validation" do
+    @tag :OBX004_6A_T1
+    test "OBX004_6A_T1: Hex package configuration is valid" do
+      # Verify package has all necessary files listed
+      project = Mix.Project.config()
+      package = project[:package]
+      assert package[:files] != nil
+      assert "lib" in package[:files]
+      assert "mix.exs" in package[:files]
+      assert "README.md" in package[:files]
+    end
+
+    @tag :OBX004_6A_T2
+    test "OBX004_6A_T2: Package metadata is complete" do
+      # Read mix.exs project config
+      project = Mix.Project.config()
+
+      # Verify critical metadata
+      assert project[:app] == :objectstorex
+      assert project[:version] =~ ~r/\d+\.\d+\.\d+/
+      assert project[:description] != nil
+      assert project[:package] != nil
+
+      # Verify package config
+      package = project[:package]
+      assert package[:name] == "objectstorex"
+      assert package[:licenses] != nil
+      assert package[:links] != nil
+      assert package[:maintainers] != nil
+    end
+
+    @tag :OBX004_6A_T3
+    test "OBX004_6A_T3: Documentation configuration is valid" do
+      # Read mix.exs project config
+      project = Mix.Project.config()
+      docs = project[:docs]
+
+      assert docs != nil
+      assert docs[:main] != nil
+      assert docs[:extras] != nil
+      assert docs[:source_url] != nil
+    end
+
+    @tag :OBX004_6A_T4
+    test "OBX004_6A_T4: All documentation files exist" do
+      # Verify key documentation files exist
+      assert File.exists?("README.md")
+      assert File.exists?("CHANGELOG.md")
+      assert File.exists?("LICENSE")
+      assert File.exists?("CONTRIBUTING.md")
+    end
+
+    @tag :OBX004_6A_T5
+    test "OBX004_6A_T5: Library compiles and basic functionality works" do
+      # This is an integration test - verify the library works end-to-end
+      assert {:ok, store} = ObjectStoreX.new(:memory)
+      assert :ok = ObjectStoreX.put(store, "test.txt", "Hello, World!")
+      assert {:ok, data} = ObjectStoreX.get(store, "test.txt")
+      assert data == "Hello, World!"
+      assert :ok = ObjectStoreX.delete(store, "test.txt")
+      assert {:error, :not_found} = ObjectStoreX.get(store, "test.txt")
+    end
+  end
 end

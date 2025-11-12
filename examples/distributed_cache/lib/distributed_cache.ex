@@ -271,17 +271,18 @@ defmodule DistributedCache do
   # Private helpers
 
   defp handle_cache_miss(state, key) do
-    case ObjectStoreX.get(state.store, key) do
-      {:ok, value, meta} ->
-        # Check max size and evict if needed
-        if :ets.info(state.cache, :size) >= state.max_size do
-          evict_oldest(state.cache)
-        end
+    # Get value and metadata
+    with {:ok, value} <- ObjectStoreX.get(state.store, key),
+         {:ok, meta} <- ObjectStoreX.head(state.store, key) do
+      # Check max size and evict if needed
+      if :ets.info(state.cache, :size) >= state.max_size do
+        evict_oldest(state.cache)
+      end
 
-        :ets.insert(state.cache, {key, meta.etag, value, current_time()})
-        increment_stat(state.stats, :misses)
-        {:ok, value}
-
+      :ets.insert(state.cache, {key, meta.etag, value, current_time()})
+      increment_stat(state.stats, :misses)
+      {:ok, value}
+    else
       {:error, reason} ->
         increment_stat(state.stats, :misses)
         {:error, reason}
