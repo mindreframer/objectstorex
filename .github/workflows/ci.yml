@@ -50,18 +50,11 @@ jobs:
           restore-keys: |
             deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-
 
-      - name: Restore Rust cache
-        uses: actions/cache@v4
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            native/objectstorex/target/
-          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-${{ runner.os }}-
+          prefix-key: v0-ci
+          shared-key: ${{ matrix.elixir }}-${{ matrix.otp }}-${{ runner.os }}
+          workspaces: native/objectstorex
 
       - name: Install dependencies
         run: mix deps.get
@@ -109,18 +102,11 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Restore Rust cache
-        uses: actions/cache@v4
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            native/objectstorex/target/
-          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-${{ runner.os }}-
+          prefix-key: v0-ci
+          shared-key: 1.17-27-${{ runner.os }}
+          workspaces: native/objectstorex
 
       - name: Run tests
         working-directory: native/objectstorex
@@ -162,18 +148,11 @@ jobs:
           restore-keys: |
             deps-${{ runner.os }}-27-1.17-
 
-      - name: Restore Rust cache
-        uses: actions/cache@v4
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            native/objectstorex/target/
-          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-${{ runner.os }}-
+          prefix-key: v0-ci
+          shared-key: 1.17-27-${{ runner.os }}
+          workspaces: native/objectstorex
 
       - name: Install dependencies
         run: mix deps.get
