@@ -35,6 +35,68 @@ def deps do
 end
 ```
 
+### Precompiled NIFs
+
+ObjectStoreX provides **precompiled native binaries (NIFs)** for the following platforms:
+
+- **macOS** (Apple Silicon and Intel)
+  - `aarch64-apple-darwin` (M1/M2/M3/M4)
+  - `x86_64-apple-darwin` (Intel)
+- **Linux GNU** (x86_64 and ARM64)
+  - `x86_64-unknown-linux-gnu` (Ubuntu, Debian, RHEL, Fedora, etc.)
+  - `aarch64-unknown-linux-gnu` (AWS Graviton, ARM servers)
+- **Linux musl** (x86_64 and ARM64)
+  - `x86_64-unknown-linux-musl` (Alpine Linux, containers)
+  - `aarch64-unknown-linux-musl` (Alpine Linux ARM)
+- **Windows** (x86_64)
+  - `x86_64-pc-windows-msvc` (Visual Studio toolchain)
+  - `x86_64-pc-windows-gnu` (MinGW toolchain)
+
+**No Rust toolchain required** for these platforms. The precompiled binaries are automatically downloaded from GitHub Releases during `mix deps.get`.
+
+### Building from Source
+
+If you're on an unsupported platform or prefer to build from source:
+
+**1. Install Rust toolchain:**
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+**2. Force local compilation:**
+
+Set the `OBJECTSTOREX_BUILD` environment variable:
+
+```bash
+export OBJECTSTOREX_BUILD=1
+mix deps.get
+mix deps.compile objectstorex
+```
+
+Or configure it in `config/config.exs`:
+
+```elixir
+config :objectstorex, :force_build, true
+```
+
+### Troubleshooting
+
+**"NIF not loaded" error:**
+- Verify your platform is in the supported list above
+- Try forcing a local build: `OBJECTSTOREX_BUILD=1 mix deps.compile objectstorex --force`
+- Check [GitHub Issues](https://github.com/yourorg/objectstorex/issues) for platform-specific problems
+
+**Precompiled binary download fails:**
+- Ensure you have internet connectivity
+- Check if the release exists on [GitHub Releases](https://github.com/yourorg/objectstorex/releases)
+- Try building from source as described above
+
+**Compilation errors when building from source:**
+- Verify Rust toolchain version: `rustc --version` (minimum: 1.86.0)
+- Update Rust: `rustup update`
+- Clean and rebuild: `mix deps.clean objectstorex && mix deps.compile objectstorex`
+
 ## Quick Start
 
 ```elixir
