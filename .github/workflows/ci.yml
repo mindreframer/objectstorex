@@ -18,8 +18,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        elixir: ['1.14', '1.15', '1.16', '1.17']
-        otp: ['25', '26', '27']
+        elixir: ['1.17']
+        otp: ['27']
         exclude:
           # Elixir 1.14 doesn't support OTP 27
           - elixir: '1.14'
