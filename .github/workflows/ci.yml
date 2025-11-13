@@ -77,9 +77,9 @@ jobs:
         run: mix dialyzer
         if: matrix.elixir == '1.17' && matrix.otp == '27'
 
-      - name: Generate coverage
-        run: mix coveralls.json
-        if: matrix.elixir == '1.17' && matrix.otp == '27'
+      # - name: Generate coverage
+      #   run: mix coveralls.json --exclude cloud --exclude skip_ci
+      #   if: matrix.elixir == '1.17' && matrix.otp == '27'
 
       # - name: Upload coverage to Codecov
       #   uses: codecov/codecov-action@v4
