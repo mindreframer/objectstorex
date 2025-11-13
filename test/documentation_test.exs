@@ -144,4 +144,114 @@ defmodule ObjectStoreX.DocumentationTest do
     assert File.exists?(Path.join([File.cwd!(), "CHANGELOG.md"]))
     assert File.exists?(Path.join([File.cwd!(), "CONTRIBUTING.md"]))
   end
+
+  @doc """
+  OBX005_5A_T1: Test README installation instructions are accurate
+  """
+  test "OBX005_5A_T1: README has installation section with precompiled NIF info" do
+    readme_path = Path.join([File.cwd!(), "README.md"])
+    content = File.read!(readme_path)
+
+    # Check installation section exists
+    assert content =~ "## Installation"
+    assert content =~ "{:objectstorex, \"~> 0.1.0\"}"
+
+    # Check precompiled NIFs section exists
+    assert content =~ "### Precompiled NIFs"
+    assert content =~ "No Rust toolchain required"
+
+    # Check all 8 platforms are documented
+    assert content =~ "aarch64-apple-darwin"
+    assert content =~ "x86_64-apple-darwin"
+    assert content =~ "aarch64-unknown-linux-gnu"
+    assert content =~ "x86_64-unknown-linux-gnu"
+    assert content =~ "aarch64-unknown-linux-musl"
+    assert content =~ "x86_64-unknown-linux-musl"
+    assert content =~ "x86_64-pc-windows-msvc"
+    assert content =~ "x86_64-pc-windows-gnu"
+  end
+
+  @doc """
+  OBX005_5A_T2: Test forced build instructions work
+  """
+  test "OBX005_5A_T2: README has building from source section" do
+    readme_path = Path.join([File.cwd!(), "README.md"])
+    content = File.read!(readme_path)
+
+    # Check building from source section exists
+    assert content =~ "### Building from Source"
+
+    # Check it documents Rust installation
+    assert content =~ "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs"
+
+    # Check it documents OBJECTSTOREX_BUILD environment variable
+    assert content =~ "OBJECTSTOREX_BUILD=1"
+    assert content =~ "export OBJECTSTOREX_BUILD=1"
+  end
+
+  @doc """
+  OBX005_5A_T3: Test all platform names are correct
+  """
+  test "OBX005_5A_T3: README platform list matches expected targets" do
+    readme_path = Path.join([File.cwd!(), "README.md"])
+    content = File.read!(readme_path)
+
+    # Expected targets based on spec
+    expected_targets = [
+      "aarch64-apple-darwin",
+      "x86_64-apple-darwin",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-musl",
+      "x86_64-unknown-linux-musl",
+      "x86_64-pc-windows-msvc",
+      "x86_64-pc-windows-gnu"
+    ]
+
+    for target <- expected_targets do
+      assert content =~ target,
+             "README is missing target: #{target}"
+    end
+  end
+
+  @doc """
+  OBX005_5A_T4: Test troubleshooting steps are valid
+  """
+  test "OBX005_5A_T4: README has troubleshooting section" do
+    readme_path = Path.join([File.cwd!(), "README.md"])
+    content = File.read!(readme_path)
+
+    # Check troubleshooting section exists
+    assert content =~ "### Troubleshooting"
+
+    # Check it covers common issues
+    assert content =~ "NIF not loaded"
+    assert content =~ "Precompiled binary download fails"
+    assert content =~ "Compilation errors when building from source"
+
+    # Check it provides solutions
+    assert content =~ "OBJECTSTOREX_BUILD=1 mix deps.compile objectstorex --force"
+    assert content =~ "rustc --version"
+  end
+
+  @doc """
+  OBX005_5A_T5: Test CHANGELOG documents precompiled NIF support
+  """
+  test "OBX005_5A_T5: CHANGELOG documents precompiled NIF feature" do
+    changelog_path = Path.join([File.cwd!(), "CHANGELOG.md"])
+    content = File.read!(changelog_path)
+
+    # Check CHANGELOG mentions precompiled NIFs
+    assert content =~ "Precompiled NIFs"
+    assert content =~ "no Rust toolchain required"
+
+    # Check it documents the deployment section
+    assert content =~ "Deployment & Distribution"
+    assert content =~ "Automated CI/CD pipeline"
+    assert content =~ "GitHub Actions"
+    assert content =~ "Checksum verification"
+
+    # Check release process updated
+    assert content =~ "mix gen.checksum"
+  end
 end

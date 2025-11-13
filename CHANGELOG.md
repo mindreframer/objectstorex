@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-provider object storage support (S3, Azure Blob Storage, GCS, Local, Memory)
 - Unified API across all storage providers
 - Rustler NIFs for high-performance operations
+- **Precompiled NIFs for 8 mainstream platforms** (macOS, Linux GNU/musl, Windows) - no Rust toolchain required
 - Comprehensive error handling with descriptive error types
 
 #### Advanced Operations
@@ -96,6 +97,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optimized Rust NIFs with async I/O
 - Efficient memory usage for streaming operations
 
+### Deployment & Distribution
+- Automated CI/CD pipeline for precompiled NIFs (GitHub Actions)
+- Precompiled binaries for 8 platforms:
+  - macOS: aarch64-apple-darwin, x86_64-apple-darwin
+  - Linux GNU: aarch64-unknown-linux-gnu, x86_64-unknown-linux-gnu
+  - Linux musl: aarch64-unknown-linux-musl, x86_64-unknown-linux-musl
+  - Windows: x86_64-pc-windows-msvc, x86_64-pc-windows-gnu
+- Build attestation and artifact signing for security
+- Automatic GitHub Releases publishing on version tags
+- Checksum verification for downloaded binaries
+- Fallback to source compilation for unsupported platforms
+
 ## [Unreleased]
 
 ### Planned Features
@@ -117,8 +130,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 3. Commit: `git commit -m "Release v0.x.y"`
 4. Tag: `git tag v0.x.y`
 5. Push: `git push && git push --tags`
-6. Publish to Hex.pm: `mix hex.publish`
-7. Create GitHub release with release notes
+6. Wait for GitHub Actions to build precompiled NIFs
+7. Generate checksums: `mix gen.checksum`
+8. Commit checksum file: `git commit -am "Add checksums for v0.x.y"`
+9. Publish to Hex.pm: `mix hex.publish`
+10. Create GitHub release with release notes
 
 ## Links
 
