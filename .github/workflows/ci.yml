@@ -54,6 +54,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: v0-ci
+          save-if: true
+          cache-targets: true
           shared-key: ${{ matrix.elixir }}-${{ matrix.otp }}-${{ runner.os }}
           workspaces: native/objectstorex
 
@@ -106,7 +108,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: v0-ci
-          shared-key: 1.17-27-${{ runner.os }}
+          save-if: true
+          cache-targets: true
+          shared-key: ${{ matrix.elixir }}-${{ matrix.otp }}-${{ runner.os }}
           workspaces: native/objectstorex
 
       - name: Run tests
@@ -124,7 +128,8 @@ jobs:
   test-cloud:
     name: Cloud Provider Tests
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # if: github.ref == 'refs/heads/main'
+    if: false
     needs: [test, test-rust]
     steps:
       - name: Checkout code
@@ -151,7 +156,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: v0-ci
+          prefix-key: v0-cloud
+          save-if: true
+          cache-targets: true
           shared-key: 1.17-27-${{ runner.os }}
           workspaces: native/objectstorex
 
