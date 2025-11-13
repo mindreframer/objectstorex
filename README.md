@@ -9,19 +9,6 @@
 
 ObjectStoreX provides a **consistent API** across multiple cloud storage providers (AWS S3, Azure Blob Storage, Google Cloud Storage) and local storage, powered by the battle-tested Rust [`object_store`](https://github.com/apache/arrow-rs/tree/master/object_store) library via Rustler NIFs for near-native performance.
 
-## Features
-
-- **Multi-Provider Support**: AWS S3, Azure Blob Storage, GCS, local filesystem, in-memory storage
-- **Advanced Operations**:
-  - Compare-And-Swap (CAS) with ETags
-  - Conditional GET/PUT operations
-  - Create-only writes for distributed locks
-  - Rich metadata and attributes
-- **Performance**: High-performance Rust NIFs with async I/O
-- **Streaming**: Support for large files with streaming uploads/downloads
-- **Bulk Operations**: Efficient batch operations for multiple objects
-- **Use Case Examples**: Distributed locks, optimistic counters, HTTP-style caching
-
 ## Installation
 
 Add `objectstorex` to your list of dependencies in `mix.exs`:
@@ -33,68 +20,6 @@ def deps do
   ]
 end
 ```
-
-### Precompiled NIFs
-
-ObjectStoreX provides **precompiled native binaries (NIFs)** for the following platforms:
-
-- **macOS** (Apple Silicon and Intel)
-  - `aarch64-apple-darwin` (M1/M2/M3/M4)
-  - `x86_64-apple-darwin` (Intel)
-- **Linux GNU** (x86_64 and ARM64)
-  - `x86_64-unknown-linux-gnu` (Ubuntu, Debian, RHEL, Fedora, etc.)
-  - `aarch64-unknown-linux-gnu` (AWS Graviton, ARM servers)
-- **Linux musl** (x86_64 and ARM64)
-  - `x86_64-unknown-linux-musl` (Alpine Linux, containers)
-  - `aarch64-unknown-linux-musl` (Alpine Linux ARM)
-- **Windows** (x86_64)
-  - `x86_64-pc-windows-msvc` (Visual Studio toolchain)
-  - `x86_64-pc-windows-gnu` (MinGW toolchain)
-
-**No Rust toolchain required** for these platforms. The precompiled binaries are automatically downloaded from GitHub Releases during `mix deps.get`.
-
-### Building from Source
-
-If you're on an unsupported platform or prefer to build from source:
-
-**1. Install Rust toolchain:**
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-**2. Force local compilation:**
-
-Set the `OBJECTSTOREX_BUILD` environment variable:
-
-```bash
-export OBJECTSTOREX_BUILD=1
-mix deps.get
-mix deps.compile objectstorex
-```
-
-Or configure it in `config/config.exs`:
-
-```elixir
-config :objectstorex, :force_build, true
-```
-
-### Troubleshooting
-
-**"NIF not loaded" error:**
-- Verify your platform is in the supported list above
-- Try forcing a local build: `OBJECTSTOREX_BUILD=1 mix deps.compile objectstorex --force`
-- Check [GitHub Issues](https://github.com/yourorg/objectstorex/issues) for platform-specific problems
-
-**Precompiled binary download fails:**
-- Ensure you have internet connectivity
-- Check if the release exists on [GitHub Releases](https://github.com/yourorg/objectstorex/releases)
-- Try building from source as described above
-
-**Compilation errors when building from source:**
-- Verify Rust toolchain version: `rustc --version` (minimum: 1.86.0)
-- Update Rust: `rustup update`
-- Clean and rebuild: `mix deps.clean objectstorex && mix deps.compile objectstorex`
 
 ## Quick Start
 
@@ -154,6 +79,40 @@ config :objectstorex, :force_build, true
 ```elixir
 {:ok, store} = ObjectStoreX.new(:local, path: "/tmp/storage")
 ```
+
+### MinIO (S3-Compatible Local Storage)
+
+MinIO is perfect for local development and testing with S3-compatible APIs:
+
+```elixir
+# Using MinIO running locally (default: http://localhost:9000)
+{:ok, store} = ObjectStoreX.new(:s3,
+  bucket: "my-bucket",
+  region: "us-east-1",  # MinIO ignores region but it's required
+  access_key_id: "minioadmin",
+  secret_access_key: "minioadmin",
+  endpoint: "http://localhost:9000"
+)
+
+# Using MinIO in Docker
+# docker run -p 9000:9000 -p 9001:9001 \
+#   -e MINIO_ROOT_USER=minioadmin \
+#   -e MINIO_ROOT_PASSWORD=minioadmin \
+#   minio/minio server /data --console-address ":9001"
+```
+
+## Features
+
+- **Multi-Provider Support**: AWS S3, Azure Blob Storage, GCS, local filesystem, in-memory storage
+- **Advanced Operations**:
+  - Compare-And-Swap (CAS) with ETags
+  - Conditional GET/PUT operations
+  - Create-only writes for distributed locks
+  - Rich metadata and attributes
+- **Performance**: High-performance Rust NIFs with async I/O
+- **Streaming**: Support for large files with streaming uploads/downloads
+- **Bulk Operations**: Efficient batch operations for multiple objects
+- **Use Case Examples**: Distributed locks, optimistic counters, HTTP-style caching
 
 ## Advanced Features
 
@@ -368,44 +327,24 @@ case ObjectStoreX.rename_if_not_exists(store, "old.txt", "new.txt") do
 end
 ```
 
-## Testing
-
-Run the test suite:
-
-```bash
-mix test
-```
-
-Run integration tests:
-
-```bash
-mix test test/integration/
-```
-
-Run quality checks:
-
-```bash
-./bin/qa_check.sh
-```
-
 ## Provider Support Matrix
 
 | Feature | S3 | Azure | GCS | Local | Memory |
 |---------|-----|-------|-----|-------|--------|
-| PutMode::Create | ✅ | ✅ | ✅ | ✅ | ✅ |
-| PutMode::Update (ETag) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| PutMode::Update (Version) | ✅ | ❌ | ✅ | ❌ | ❌ |
-| if_match | ✅ | ✅ | ✅ | ✅ | ✅ |
-| if_none_match | ✅ | ✅ | ✅ | ✅ | ✅ |
-| if_modified_since | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Attributes | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
-| Tags | ✅ | ❌ | ✅ | ❌ | ❌ |
-| copy_if_not_exists | ❌ | ✅ | ✅ | ✅ | ✅ |
+| PutMode::Create | ✓ | ✓ | ✓ | ✓ | ✓ |
+| PutMode::Update (ETag) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| PutMode::Update (Version) | ✓ | ✗ | ✓ | ✗ | ✗ |
+| if_match | ✓ | ✓ | ✓ | ✓ | ✓ |
+| if_none_match | ✓ | ✓ | ✓ | ✓ | ✓ |
+| if_modified_since | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Attributes | ✓ | ✓ | ✓ | ~ | ~ |
+| Tags | ✓ | ✗ | ✓ | ✗ | ✗ |
+| copy_if_not_exists | ✗ | ✓ | ✓ | ✓ | ✓ |
 
 Legend:
-- ✅ Fully supported
-- ⚠️ Partially supported (limited attributes)
-- ❌ Not supported
+- ✓ Fully supported
+- ~ Partially supported (limited attributes)
+- ✗ Not supported
 
 ## Documentation
 
@@ -434,6 +373,92 @@ ObjectStoreX uses high-performance Rust NIFs with async I/O for optimal throughp
 | Streaming (large files) | ~100MB/s+ |
 | Bulk operations | Parallel execution |
 
+## Development Setup
+
+This section is for contributors and developers who want to build from source or contribute to ObjectStoreX.
+
+### Precompiled NIFs
+
+ObjectStoreX provides **precompiled native binaries (NIFs)** for the following platforms:
+
+- **macOS** (Apple Silicon and Intel)
+  - `aarch64-apple-darwin` (M1/M2/M3/M4)
+  - `x86_64-apple-darwin` (Intel)
+- **Linux GNU** (x86_64 and ARM64)
+  - `x86_64-unknown-linux-gnu` (Ubuntu, Debian, RHEL, Fedora, etc.)
+  - `aarch64-unknown-linux-gnu` (AWS Graviton, ARM servers)
+- **Linux musl** (x86_64 and ARM64)
+  - `x86_64-unknown-linux-musl` (Alpine Linux, containers)
+  - `aarch64-unknown-linux-musl` (Alpine Linux ARM)
+- **Windows** (x86_64)
+  - `x86_64-pc-windows-msvc` (Visual Studio toolchain)
+  - `x86_64-pc-windows-gnu` (MinGW toolchain)
+
+**No Rust toolchain required** for these platforms. The precompiled binaries are automatically downloaded from GitHub Releases during `mix deps.get`.
+
+### Building from Source
+
+If you're on an unsupported platform or prefer to build from source:
+
+**1. Install Rust toolchain:**
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+**2. Force local compilation:**
+
+Set the `OBJECTSTOREX_BUILD` environment variable:
+
+```bash
+export OBJECTSTOREX_BUILD=1
+mix deps.get
+mix deps.compile objectstorex
+```
+
+Or configure it in `config/config.exs`:
+
+```elixir
+config :objectstorex, :force_build, true
+```
+
+### Troubleshooting
+
+**"NIF not loaded" error:**
+- Verify your platform is in the supported list above
+- Try forcing a local build: `OBJECTSTOREX_BUILD=1 mix deps.compile objectstorex --force`
+- Check [GitHub Issues](https://github.com/mindreframer/objectstorex/issues) for platform-specific problems
+
+**Precompiled binary download fails:**
+- Ensure you have internet connectivity
+- Check if the release exists on [GitHub Releases](https://github.com/mindreframer/objectstorex/releases)
+- Try building from source as described above
+
+**Compilation errors when building from source:**
+- Verify Rust toolchain version: `rustc --version` (minimum: 1.86.0)
+- Update Rust: `rustup update`
+- Clean and rebuild: `mix deps.clean objectstorex && mix deps.compile objectstorex`
+
+### Testing
+
+Run the test suite:
+
+```bash
+mix test
+```
+
+Run integration tests:
+
+```bash
+mix test test/integration/
+```
+
+Run quality checks:
+
+```bash
+./bin/qa_check.sh
+```
+
 ## License
 
 Copyright 2024-2025. Licensed under the Apache License, Version 2.0.
@@ -443,4 +468,3 @@ Copyright 2024-2025. Licensed under the Apache License, Version 2.0.
 Built with:
 - [object_store](https://github.com/apache/arrow-rs/tree/master/object_store) - High-performance Rust object storage abstraction
 - [Rustler](https://github.com/rusterlium/rustler) - Safe Rust bridge for Elixir NIFs
-
