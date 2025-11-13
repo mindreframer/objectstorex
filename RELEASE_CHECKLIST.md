@@ -278,17 +278,13 @@ Expected format:
 - [ ] All checksums are 64-character hex strings
 - [ ] Version in filenames matches release version
 
-### 4.3 Commit Checksum File
+### 4.3 Keep Checksum File Local
 
-```bash
-git add checksum-Elixir.ObjectStoreX.Native.exs
-git commit -m "Add checksums for vX.Y.Z precompiled NIFs"
-git push origin main
-```
+**Important:** The checksum file should NOT be committed to git. It's listed in `.gitignore` and will be included in the Hex package automatically when you run `mix hex.build`.
 
 **Checklist:**
-- [ ] Checksum file committed
-- [ ] Pushed to remote
+- [ ] Checksum file exists locally
+- [ ] File is NOT committed (should be ignored by git)
 
 ---
 
@@ -368,7 +364,7 @@ Before publishing, triple-check:
 - [ ] CHANGELOG.md is updated
 - [ ] All tests pass
 - [ ] All 8 precompiled NIFs available on GitHub Release
-- [ ] Checksum file committed and pushed
+- [ ] Checksum file generated locally
 - [ ] Package contents verified
 - [ ] Dry run successful
 
@@ -587,11 +583,8 @@ git push
 git tag -a vX.Y.Z -m "Release version X.Y.Z"
 git push origin vX.Y.Z
 
-# After CI completes: Generate checksums
+# After CI completes: Generate checksums (keep local, don't commit)
 mix gen.checksum
-git add checksum-Elixir.ObjectStoreX.Native.exs
-git commit -m "Add checksums for vX.Y.Z precompiled NIFs"
-git push
 
 # Publish
 mix hex.build
@@ -654,7 +647,7 @@ The complete release process:
 2. ✅ **Version**: Update version, CHANGELOG, README
 3. ✅ **Tag**: Create and push git tag (triggers CI)
 4. ✅ **Wait**: CI builds all 8 precompiled NIFs (~30 min)
-5. ✅ **Checksums**: Generate and commit checksums
+5. ✅ **Checksums**: Generate checksums locally (don't commit)
 6. ✅ **Verify**: Build and inspect hex package
 7. ✅ **Publish**: Publish to hex.pm
 8. ✅ **Test**: Verify installation and functionality
