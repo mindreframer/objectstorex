@@ -34,11 +34,13 @@ defmodule ObjectStoreX.OBX005_6A_ReleaseProcessTest do
       if is_dev do
         # In dev mode, rustler should not be optional
         deps = Mix.Project.config()[:deps] || []
-        rustler_dep = Enum.find(deps, fn
-          {:rustler, _opts} -> true
-          {:rustler, _version, _opts} -> true
-          _ -> false
-        end)
+
+        rustler_dep =
+          Enum.find(deps, fn
+            {:rustler, _opts} -> true
+            {:rustler, _version, _opts} -> true
+            _ -> false
+          end)
 
         case rustler_dep do
           {:rustler, opts} when is_list(opts) ->
@@ -420,7 +422,9 @@ defmodule ObjectStoreX.OBX005_6A_ReleaseProcessTest do
             :ok
 
           _ ->
-            flunk("Dependency should be {name, version} or {name, version, opts}, got: #{inspect(dep)}")
+            flunk(
+              "Dependency should be {name, version} or {name, version, opts}, got: #{inspect(dep)}"
+            )
         end
       end
     end

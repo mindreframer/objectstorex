@@ -79,7 +79,8 @@ defmodule OBX0053ARustConfigurationTest do
 
   describe "OBX005_3A_T2: Validate Cross.toml is valid TOML" do
     test "Cross.toml file exists" do
-      assert File.exists?(@cross_toml_path), "Cross.toml file does not exist at #{@cross_toml_path}"
+      assert File.exists?(@cross_toml_path),
+             "Cross.toml file does not exist at #{@cross_toml_path}"
     end
 
     test "Cross.toml file is readable and has content" do
@@ -97,14 +98,18 @@ defmodule OBX0053ARustConfigurationTest do
       {:ok, content} = File.read(@cross_toml_path)
 
       assert content =~ "passthrough", "Cross.toml missing passthrough configuration"
-      assert content =~ "RUSTLER_NIF_VERSION", "Cross.toml missing RUSTLER_NIF_VERSION passthrough"
+
+      assert content =~ "RUSTLER_NIF_VERSION",
+             "Cross.toml missing RUSTLER_NIF_VERSION passthrough"
+
       assert content =~ "RUSTFLAGS", "Cross.toml missing RUSTFLAGS passthrough"
     end
   end
 
   describe "OBX005_3A_T3: Verify Cargo.toml has NIF version features" do
     test "Cargo.toml file exists" do
-      assert File.exists?(@cargo_toml_path), "Cargo.toml file does not exist at #{@cargo_toml_path}"
+      assert File.exists?(@cargo_toml_path),
+             "Cargo.toml file does not exist at #{@cargo_toml_path}"
     end
 
     test "Cargo.toml has [features] section" do

@@ -123,7 +123,8 @@ defmodule PackageValidationTest do
       ]
 
       for guide <- guides do
-        assert doc_index =~ guide or File.exists?("doc/#{String.downcase(String.replace(guide, " ", "_"))}.html"),
+        assert doc_index =~ guide or
+                 File.exists?("doc/#{String.downcase(String.replace(guide, " ", "_"))}.html"),
                "Guide '#{guide}' not found in documentation"
       end
 
