@@ -26,3 +26,6 @@ objectstorex-*.tar
 # Dialyzer PLT files (build artifacts)
 /priv/plts/
 /priv/native/
+
+# Precompiled NIF checksums (generated before hex publish)
+checksum-*.exs
