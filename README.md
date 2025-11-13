@@ -7,7 +7,7 @@
 
 **Unified object storage for Elixir** with production-ready features like Compare-And-Swap (CAS), conditional operations, streaming, and comprehensive error handling.
 
-ObjectStoreX provides a **consistent API** across multiple cloud storage providers (AWS S3, Azure Blob Storage, Google Cloud Storage) and local storage, powered by the battle-tested Rust [`object_store`](https://github.com/apache/arrow-rs/tree/master/object_store) library via Rustler NIFs for near-native performance.
+ObjectStoreX provides a **consistent API** across multiple cloud storage providers (AWS S3, Azure Blob Storage, Google Cloud Storage) and local storage, powered by the battle-tested Rust [`object_store`](https://github.com/apache/arrow-rs-object-store) library via Rustler NIFs for near-native performance.
 
 ## Installation
 
