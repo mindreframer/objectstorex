@@ -29,4 +29,6 @@ objectstorex-*.tar
 
 # Precompiled NIF checksums (generated before hex publish)
 checksum-*.exs
-objectstorex-0.1.0
+
+# Unpacked hex package directory (from mix hex.build --unpack)
+objectstorex-*/
