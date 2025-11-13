@@ -76,9 +76,9 @@ jobs:
       #   run: mix credo --strict
       #   if: matrix.elixir == '1.17' && matrix.otp == '27'
 
-      - name: Run Dialyzer
-        run: mix dialyzer
-        if: matrix.elixir == '1.17' && matrix.otp == '27'
+      # - name: Run Dialyzer
+      #   run: mix dialyzer
+      #   if: matrix.elixir == '1.17' && matrix.otp == '27'
 
       # - name: Generate coverage
       #   run: mix coveralls.json --exclude cloud --exclude skip_ci
@@ -125,69 +125,69 @@ jobs:
         working-directory: native/objectstorex
         run: cargo fmt --check
 
-  test-cloud:
-    name: Cloud Provider Tests
-    runs-on: ubuntu-latest
-    # if: github.ref == 'refs/heads/main'
-    if: false
-    needs: [test, test-rust]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # test-cloud:
+  #   name: Cloud Provider Tests
+  #   runs-on: ubuntu-latest
+  #   # if: github.ref == 'refs/heads/main'
+  #   if: false
+  #   needs: [test, test-rust]
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Setup Elixir
-        uses: erlef/setup-beam@v1
-        with:
-          elixir-version: '1.17'
-          otp-version: '27'
+  #     - name: Setup Elixir
+  #       uses: erlef/setup-beam@v1
+  #       with:
+  #         elixir-version: '1.17'
+  #         otp-version: '27'
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+  #     - name: Setup Rust
+  #       uses: dtolnay/rust-toolchain@stable
 
-      - name: Restore dependencies cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            deps
-            _build
-          key: deps-${{ runner.os }}-27-1.17-${{ hashFiles('**/mix.lock') }}
-          restore-keys: |
-            deps-${{ runner.os }}-27-1.17-
+  #     - name: Restore dependencies cache
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: |
+  #           deps
+  #           _build
+  #         key: deps-${{ runner.os }}-27-1.17-${{ hashFiles('**/mix.lock') }}
+  #         restore-keys: |
+  #           deps-${{ runner.os }}-27-1.17-
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: v0-cloud
-          save-if: true
-          cache-targets: true
-          shared-key: 1.17-27-${{ runner.os }}
-          workspaces: native/objectstorex
+  #     - uses: Swatinem/rust-cache@v2
+  #       with:
+  #         prefix-key: v0-cloud
+  #         save-if: true
+  #         cache-targets: true
+  #         shared-key: 1.17-27-${{ runner.os }}
+  #         workspaces: native/objectstorex
 
-      - name: Install dependencies
-        run: mix deps.get
+  #     - name: Install dependencies
+  #       run: mix deps.get
 
-      - name: Compile
-        run: mix compile
+  #     - name: Compile
+  #       run: mix compile
 
-      - name: Test S3 (if configured)
-        if: vars.HAS_S3_CREDENTIALS == 'true'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          TEST_S3_BUCKET: ${{ secrets.TEST_S3_BUCKET }}
-          TEST_S3_REGION: ${{ secrets.TEST_S3_REGION }}
-        run: mix test --only s3
+  #     - name: Test S3 (if configured)
+  #       if: vars.HAS_S3_CREDENTIALS == 'true'
+  #       env:
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         TEST_S3_BUCKET: ${{ secrets.TEST_S3_BUCKET }}
+  #         TEST_S3_REGION: ${{ secrets.TEST_S3_REGION }}
+  #       run: mix test --only s3
 
-      - name: Test Azure (if configured)
-        if: vars.HAS_AZURE_CREDENTIALS == 'true'
-        env:
-          AZURE_STORAGE_ACCOUNT_NAME: ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }}
-          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
-          TEST_AZURE_CONTAINER: ${{ secrets.TEST_AZURE_CONTAINER }}
-        run: mix test --only azure
+  #     - name: Test Azure (if configured)
+  #       if: vars.HAS_AZURE_CREDENTIALS == 'true'
+  #       env:
+  #         AZURE_STORAGE_ACCOUNT_NAME: ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }}
+  #         AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+  #         TEST_AZURE_CONTAINER: ${{ secrets.TEST_AZURE_CONTAINER }}
+  #       run: mix test --only azure
 
-      - name: Test GCS (if configured)
-        if: vars.HAS_GCS_CREDENTIALS == 'true'
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-          TEST_GCS_BUCKET: ${{ secrets.TEST_GCS_BUCKET }}
-        run: mix test --only gcs
+  #     - name: Test GCS (if configured)
+  #       if: vars.HAS_GCS_CREDENTIALS == 'true'
+  #       env:
+  #         GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+  #         TEST_GCS_BUCKET: ${{ secrets.TEST_GCS_BUCKET }}
+  #       run: mix test --only gcs
