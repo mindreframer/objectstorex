@@ -3,6 +3,8 @@ defmodule ObjectStoreX.MixProject do
 
   @version "0.1.0"
   @source_url "https://github.com/yourorg/objectstorex"
+  @dev? String.ends_with?(@version, "-dev")
+  @force_build? System.get_env("OBJECTSTOREX_BUILD") in ["1", "true"]
 
   def project do
     [
@@ -11,6 +13,7 @@ defmodule ObjectStoreX.MixProject do
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      aliases: aliases(),
       elixirc_paths: elixirc_paths(Mix.env()),
 
       # Hex
@@ -53,7 +56,8 @@ defmodule ObjectStoreX.MixProject do
 
   defp deps do
     [
-      {:rustler, "~> 0.35.0", runtime: false},
+      {:rustler, "~> 0.35.0", optional: not (@dev? or @force_build?), runtime: false},
+      {:rustler_precompiled, "~> 0.7"},
       {:jason, "~> 1.4"},
 
       # Dev/Test
@@ -78,12 +82,15 @@ defmodule ObjectStoreX.MixProject do
       files: [
         "lib",
         "native/objectstorex/src",
+        "native/objectstorex/.cargo",
         "native/objectstorex/Cargo.toml",
         "native/objectstorex/Cargo.lock",
+        "native/objectstorex/Cross.toml",
         "mix.exs",
         "README.md",
         "LICENSE",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "checksum-Elixir.ObjectStoreX.Native.exs"
       ],
       maintainers: ["ObjectStoreX Contributors"],
       licenses: ["Apache-2.0"],
@@ -124,6 +131,12 @@ defmodule ObjectStoreX.MixProject do
           ObjectStoreX.Attributes
         ]
       ]
+    ]
+  end
+
+  defp aliases do
+    [
+      "gen.checksum": "rustler_precompiled.download ObjectStoreX.Native --all --print"
     ]
   end
 end
