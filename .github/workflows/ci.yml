@@ -9,6 +9,7 @@ on:
 env:
   MIX_ENV: test
   RUST_BACKTRACE: 1
+  OBJECTSTOREX_BUILD: "1"  # Force build from source in CI
 
 jobs:
   test:
