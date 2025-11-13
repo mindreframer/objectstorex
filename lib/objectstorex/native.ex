@@ -2,7 +2,29 @@ defmodule ObjectStoreX.Native do
   @moduledoc false
   # NIF module - functions are implemented in Rust
 
-  use Rustler, otp_app: :objectstorex, crate: "objectstorex"
+  mix_config = Mix.Project.config()
+  version = mix_config[:version]
+  github_url = mix_config[:package][:links]["GitHub"]
+  mode = if Mix.env() in [:dev, :test], do: :debug, else: :release
+
+  use RustlerPrecompiled,
+    otp_app: :objectstorex,
+    crate: "objectstorex",
+    version: version,
+    base_url: "#{github_url}/releases/download/v#{version}",
+    targets: ~w(
+      aarch64-apple-darwin
+      x86_64-apple-darwin
+      aarch64-unknown-linux-gnu
+      x86_64-unknown-linux-gnu
+      aarch64-unknown-linux-musl
+      x86_64-unknown-linux-musl
+      x86_64-pc-windows-msvc
+      x86_64-pc-windows-gnu
+    ),
+    nif_versions: ["2.15"],
+    mode: mode,
+    force_build: System.get_env("OBJECTSTOREX_BUILD") in ["1", "true"]
 
   # Provider builders
   def new_s3(_bucket, _region, _access_key_id, _secret_access_key, _endpoint),

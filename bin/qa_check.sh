@@ -10,6 +10,9 @@ echo "=== QA Check Script ==="
 echo "Running from: $PROJECT_ROOT"
 echo ""
 
+# Force build from source during development
+export OBJECTSTOREX_BUILD=1
+
 echo "Step 1: Running Elixir tests..."
 mix test
 echo "✓ Elixir tests passed"
@@ -30,7 +33,7 @@ echo "✓ Clippy passed"
 echo ""
 
 echo "Step 4: Checking for compilation warnings..."
-mix compile --warnings-as-errors
+OBJECTSTOREX_BUILD=1 mix compile --warnings-as-errors
 echo "✓ No compilation warnings"
 echo ""
 
