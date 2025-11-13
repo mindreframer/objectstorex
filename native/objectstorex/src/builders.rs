@@ -10,14 +10,16 @@ use std::sync::Arc;
 #[rustler::nif]
 pub fn new_s3(
     bucket: String,
-    region: String,
+    region: Option<String>,
     access_key_id: Option<String>,
     secret_access_key: Option<String>,
     endpoint: Option<String>,
 ) -> NifResult<ResourceArc<StoreWrapper>> {
-    let mut builder = AmazonS3Builder::new()
-        .with_bucket_name(bucket)
-        .with_region(region);
+    let mut builder = AmazonS3Builder::new().with_bucket_name(bucket);
+
+    if let Some(region) = region {
+        builder = builder.with_region(region);
+    }
 
     if let Some(key) = access_key_id {
         builder = builder.with_access_key_id(key);

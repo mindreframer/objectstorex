@@ -201,7 +201,7 @@ defmodule ObjectStoreX do
 
   def new(:s3, opts) do
     bucket = Keyword.fetch!(opts, :bucket)
-    region = Keyword.fetch!(opts, :region)
+    region = Keyword.get(opts, :region)
     access_key_id = Keyword.get(opts, :access_key_id)
     secret_access_key = Keyword.get(opts, :secret_access_key)
     endpoint = Keyword.get(opts, :endpoint)
