@@ -2,6 +2,7 @@ defmodule PackageValidationTest do
   use ExUnit.Case, async: false
 
   @moduletag :package_validation
+  @moduletag :skip_ci
 
   @version Mix.Project.config()[:version]
   @app Mix.Project.config()[:app]

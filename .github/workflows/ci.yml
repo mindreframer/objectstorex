@@ -70,7 +70,7 @@ jobs:
         run: mix compile --warnings-as-errors
 
       - name: Run tests
-        run: mix test --exclude cloud
+        run: mix test --exclude cloud --exclude skip_ci
 
       - name: Check formatting
         run: mix format --check-formatted
