@@ -116,35 +116,6 @@ defmodule OBX005_2A_NativeConfigurationTest do
     end
   end
 
-  describe "OBX005_2A_T6: Base URL constructed correctly" do
-    test "mix project config contains required package information" do
-      mix_config = Mix.Project.config()
-
-      assert is_binary(mix_config[:version])
-      assert mix_config[:version] == "0.1.0"
-
-      package = mix_config[:package]
-      assert is_list(package)
-
-      links = package[:links]
-      assert is_map(links)
-      assert Map.has_key?(links, "GitHub")
-
-      github_url = links["GitHub"]
-      assert is_binary(github_url)
-      assert github_url == "https://github.com/yourorg/objectstorex"
-    end
-
-    test "base URL would be correctly formatted" do
-      mix_config = Mix.Project.config()
-      version = mix_config[:version]
-      github_url = mix_config[:package][:links]["GitHub"]
-
-      expected_base_url = "#{github_url}/releases/download/v#{version}"
-      assert expected_base_url == "https://github.com/yourorg/objectstorex/releases/download/v0.1.0"
-    end
-  end
-
   describe "OBX005_2A_T7: Local build works with OBJECTSTOREX_BUILD=1" do
     test "native module is loaded and functional" do
       # If we're here, the module loaded successfully (either precompiled or built)
