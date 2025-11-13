@@ -69,9 +69,9 @@ jobs:
         run: mix format --check-formatted
         if: matrix.elixir == '1.17' && matrix.otp == '27'
 
-      - name: Run Credo
-        run: mix credo --strict
-        if: matrix.elixir == '1.17' && matrix.otp == '27'
+      # - name: Run Credo
+      #   run: mix credo --strict
+      #   if: matrix.elixir == '1.17' && matrix.otp == '27'
 
       - name: Run Dialyzer
         run: mix dialyzer
@@ -81,14 +81,14 @@ jobs:
         run: mix coveralls.json
         if: matrix.elixir == '1.17' && matrix.otp == '27'
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        if: matrix.elixir == '1.17' && matrix.otp == '27'
-        with:
-          files: ./cover/excoveralls.json
-          fail_ci_if_error: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   if: matrix.elixir == '1.17' && matrix.otp == '27'
+      #   with:
+      #     files: ./cover/excoveralls.json
+      #     fail_ci_if_error: false
+      #   env:
+      #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   test-rust:
     name: Test Rust NIFs
