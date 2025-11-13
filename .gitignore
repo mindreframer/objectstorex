@@ -29,3 +29,4 @@ objectstorex-*.tar
 
 # Precompiled NIF checksums (generated before hex publish)
 checksum-*.exs
+objectstorex-0.1.0
