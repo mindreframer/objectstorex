@@ -3,7 +3,7 @@
 [![Hex.pm](https://img.shields.io/hexpm/v/objectstorex.svg)](https://hex.pm/packages/objectstorex)
 [![Documentation](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/objectstorex)
 [![CI](https://img.shields.io/github/actions/workflow/status/mindreframer/objectstorex/ci.yml?branch=main&label=CI)](https://github.com/mindreframer/objectstorex/actions/workflows/ci.yml)
-[![License](https://img.shields.io/hexpm/l/objectstorex.svg)](https://github.com/mindreframer/objectstorex/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/mindreframer/objectstorex/blob/main/LICENSE)
 
 **Unified object storage for Elixir** with production-ready features like Compare-And-Swap (CAS), conditional operations, streaming, and comprehensive error handling.
 
