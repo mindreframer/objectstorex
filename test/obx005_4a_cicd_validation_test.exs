@@ -15,7 +15,6 @@ defmodule OBX0054ACICDValidationTest do
   end
 
   describe "OBX005_4A: CI/CD Pipeline Tests" do
-
     test "OBX005_4A_T1: Test workflow YAML is valid", %{content: content} do
       # Verify file exists
       assert File.exists?(@workflow_path),
@@ -252,6 +251,7 @@ defmodule OBX0054ACICDValidationTest do
 
       # Verify fail-fast is disabled (allows all builds to complete)
       strategy = build_job["strategy"]
+
       assert strategy["fail-fast"] == false,
              "fail-fast should be false to allow all builds to complete"
 

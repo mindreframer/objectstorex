@@ -37,20 +37,24 @@ defmodule OBX0051AMixConfigurationTest do
       try do
         # Test with "1"
         System.put_env("OBJECTSTOREX_BUILD", "1")
+
         assert System.get_env("OBJECTSTOREX_BUILD") in ["1", "true"],
                "Expected OBJECTSTOREX_BUILD=1 to trigger force build"
 
         # Test with "true"
         System.put_env("OBJECTSTOREX_BUILD", "true")
+
         assert System.get_env("OBJECTSTOREX_BUILD") in ["1", "true"],
                "Expected OBJECTSTOREX_BUILD=true to trigger force build"
 
         # Test with other values
         System.put_env("OBJECTSTOREX_BUILD", "0")
+
         refute System.get_env("OBJECTSTOREX_BUILD") in ["1", "true"],
                "Expected OBJECTSTOREX_BUILD=0 to not trigger force build"
 
         System.put_env("OBJECTSTOREX_BUILD", "false")
+
         refute System.get_env("OBJECTSTOREX_BUILD") in ["1", "true"],
                "Expected OBJECTSTOREX_BUILD=false to not trigger force build"
       after
@@ -65,7 +69,8 @@ defmodule OBX0051AMixConfigurationTest do
 
     test "OBX005_1A_T4: Test rustler is optional in prod mode" do
       # Get dependencies configuration
-      deps = @project_config[:deps] || Mix.Project.config()[:project][:deps] || deps_from_function()
+      deps =
+        @project_config[:deps] || Mix.Project.config()[:project][:deps] || deps_from_function()
 
       # Find rustler dependency
       rustler_dep =

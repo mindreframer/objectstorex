@@ -39,8 +39,8 @@ defmodule ObjectStoreX.Downloader do
       bytes_remaining < 0 ->
         # Local file is larger than remote file - wrong file or corruption
         IO.puts(
-          "⚠ Local file (#{format_bytes(start_offset)}) is larger than remote (#{format_bytes(total_size)})")
-        
+          "⚠ Local file (#{format_bytes(start_offset)}) is larger than remote (#{format_bytes(total_size)})"
+        )
 
         IO.puts("Removing local file and restarting download...")
         File.rm!(local_path)
