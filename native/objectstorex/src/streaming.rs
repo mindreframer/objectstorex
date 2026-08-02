@@ -1,10 +1,10 @@
+use crate::RUNTIME;
 use crate::atoms;
 use crate::store::StoreWrapper;
-use crate::RUNTIME;
 use bytes::Bytes;
 use futures::StreamExt;
 use object_store::path::Path;
-use object_store::{MultipartUpload, PutPayload};
+use object_store::{MultipartUpload, ObjectStoreExt, PutPayload};
 use rustler::{Binary, Encoder, Env, LocalPid, NifResult, OwnedEnv, ResourceArc, Term};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -337,14 +337,11 @@ fn encode_object_meta<'a>(env: Env<'a>, meta: &object_store::ObjectMeta) -> Term
         map
     };
 
-    let map = map
-        .map_put(
-            Atom::from_str(env, "version").unwrap().to_term(env),
-            meta.version.as_ref().map(|v| v.to_string()).encode(env),
-        )
-        .unwrap();
-
-    map
+    map.map_put(
+        Atom::from_str(env, "version").unwrap().to_term(env),
+        meta.version.as_ref().map(|v| v.to_string()).encode(env),
+    )
+    .unwrap()
 }
 
 /// Start a list stream that sends object metadata to the receiver process

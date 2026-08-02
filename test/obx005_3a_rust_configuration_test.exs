@@ -139,7 +139,7 @@ defmodule OBX0053ARustConfigurationTest do
 
       # Check for rust-version
       assert content =~ "rust-version", "Cargo.toml missing rust-version"
-      assert content =~ "1.86.0", "Cargo.toml missing rust-version = \"1.86.0\""
+      assert content =~ "1.91.0", "Cargo.toml missing rust-version = \"1.91.0\""
     end
 
     test "Cargo.toml has correct package metadata" do
@@ -147,8 +147,8 @@ defmodule OBX0053ARustConfigurationTest do
 
       # Check basic package info
       assert content =~ ~r/name\s*=\s*"objectstorex"/, "Cargo.toml missing package name"
-      assert content =~ ~r/version\s*=\s*"0\.1\.0"/, "Cargo.toml missing package version"
-      assert content =~ ~r/edition\s*=\s*"2021"/, "Cargo.toml missing edition = \"2021\""
+      assert content =~ ~r/version\s*=\s*"0\.2\.0"/, "Cargo.toml missing package version"
+      assert content =~ ~r/edition\s*=\s*"2024"/, "Cargo.toml missing edition = \"2024\""
     end
 
     test "Cargo.toml has cdylib crate-type" do

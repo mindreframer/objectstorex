@@ -5,11 +5,14 @@ on:
     branches: [main]
     paths:
       - "native/**"
+      - "rust-toolchain.toml"
       - ".github/workflows/nif-release.yml"
     tags:
       - "*"
   pull_request:
     paths:
+      - "native/**"
+      - "rust-toolchain.toml"
       - ".github/workflows/nif-release.yml"
   workflow_dispatch:
 
@@ -47,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.91.0
 
       - name: Extract version from mix.exs
         shell: bash

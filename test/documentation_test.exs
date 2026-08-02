@@ -154,7 +154,7 @@ defmodule ObjectStoreX.DocumentationTest do
 
     # Check installation section exists
     assert content =~ "## Installation"
-    assert content =~ "{:objectstorex, \"~> 0.1.0\"}"
+    assert content =~ "{:objectstorex, \"~> 0.2.0\"}"
 
     # Check precompiled NIFs section exists
     assert content =~ "### Precompiled NIFs"

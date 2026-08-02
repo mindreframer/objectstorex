@@ -63,33 +63,32 @@ impl<'a> Decoder<'a> for PutModeNif {
 
         // Try to decode as tuple {:update, map}
         let tuple_result: Result<(Term, Term), _> = term.decode();
-        if let Ok((tag, map)) = tuple_result {
-            if let Ok(tag_str) = tag.atom_to_string() {
-                if tag_str == "update" {
-                    use rustler::types::map::MapIterator;
+        if let Ok((tag, map)) = tuple_result
+            && let Ok(tag_str) = tag.atom_to_string()
+            && tag_str == "update"
+        {
+            use rustler::types::map::MapIterator;
 
-                    let mut etag: Option<String> = None;
-                    let mut version: Option<String> = None;
+            let mut etag: Option<String> = None;
+            let mut version: Option<String> = None;
 
-                    if let Some(iter) = MapIterator::new(map) {
-                        for (key, value) in iter {
-                            if let Ok(key_str) = key.atom_to_string() {
-                                match key_str.as_str() {
-                                    "etag" => {
-                                        etag = value.decode().ok();
-                                    }
-                                    "version" => {
-                                        version = value.decode().ok();
-                                    }
-                                    _ => {}
-                                }
+            if let Some(iter) = MapIterator::new(map) {
+                for (key, value) in iter {
+                    if let Ok(key_str) = key.atom_to_string() {
+                        match key_str.as_str() {
+                            "etag" => {
+                                etag = value.decode().ok();
                             }
+                            "version" => {
+                                version = value.decode().ok();
+                            }
+                            _ => {}
                         }
                     }
-
-                    return Ok(PutModeNif::Update { etag, version });
                 }
             }
+
+            return Ok(PutModeNif::Update { etag, version });
         }
 
         Err(RustlerError::BadArg)

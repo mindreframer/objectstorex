@@ -8,6 +8,11 @@ defmodule OBX005_2A_NativeConfigurationTest do
   in the ObjectStoreX.Native module.
   """
 
+  setup_all do
+    assert Code.ensure_loaded?(ObjectStoreX.Native)
+    :ok
+  end
+
   describe "OBX005_2A_T1: Native module compiles successfully" do
     test "native module loads without errors" do
       # The module should be loaded if we got this far

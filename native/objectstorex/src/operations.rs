@@ -1,12 +1,12 @@
+use crate::RUNTIME;
 use crate::atoms;
 use crate::errors::map_error;
 use crate::store::StoreWrapper;
 use crate::types::{AttributesNif, GetOptionsNif, PutModeNif};
-use crate::RUNTIME;
 use chrono::{DateTime, TimeZone, Utc};
 use object_store::{
-    path::Path, Attribute, Attributes, GetOptions, GetRange, PutMode, PutOptions, PutPayload,
-    UpdateVersion as ObjectStoreUpdateVersion,
+    Attribute, Attributes, GetOptions, GetRange, ObjectStoreExt, PutMode, PutOptions, PutPayload,
+    UpdateVersion as ObjectStoreUpdateVersion, path::Path,
 };
 use rustler::{Binary, Encoder, Env, NifResult, OwnedBinary, ResourceArc, Term};
 
@@ -167,11 +167,9 @@ pub fn get_ranges<'a>(
 ) -> NifResult<Term<'a>> {
     use std::ops::Range;
 
-    // Convert Vec<(u64, u64)> to Vec<Range<usize>>
-    let range_objects: Vec<Range<usize>> = ranges
-        .into_iter()
-        .map(|(start, end)| (start as usize)..(end as usize))
-        .collect();
+    // Convert Vec<(u64, u64)> to the range type used by object_store
+    let range_objects: Vec<Range<u64>> =
+        ranges.into_iter().map(|(start, end)| start..end).collect();
 
     let results = RUNTIME.block_on(async {
         store
@@ -269,14 +267,11 @@ fn encode_object_meta_for_list<'a>(env: Env<'a>, meta: &object_store::ObjectMeta
         map
     };
 
-    let map = map
-        .map_put(
-            Atom::from_str(env, "version").unwrap().to_term(env),
-            meta.version.as_ref().map(|v| v.to_string()).encode(env),
-        )
-        .unwrap();
-
-    map
+    map.map_put(
+        Atom::from_str(env, "version").unwrap().to_term(env),
+        meta.version.as_ref().map(|v| v.to_string()).encode(env),
+    )
+    .unwrap()
 }
 
 /// List objects with delimiter, returning objects and common prefixes separately
@@ -364,7 +359,7 @@ pub fn get_with_options<'a>(
     }
 
     if let Some(range) = options.range {
-        rust_options.range = Some(GetRange::Bounded(range.start as usize..range.end as usize));
+        rust_options.range = Some(GetRange::Bounded(range.start..range.end));
     }
 
     if let Some(version) = options.version {
@@ -440,14 +435,11 @@ fn encode_object_meta_with_version<'a>(env: Env<'a>, meta: &object_store::Object
         map
     };
 
-    let map = map
-        .map_put(
-            Atom::from_str(env, "version").unwrap().to_term(env),
-            meta.version.as_ref().map(|v| v.to_string()).encode(env),
-        )
-        .unwrap();
-
-    map
+    map.map_put(
+        Atom::from_str(env, "version").unwrap().to_term(env),
+        meta.version.as_ref().map(|v| v.to_string()).encode(env),
+    )
+    .unwrap()
 }
 
 /// Helper function to encode ObjectMeta with Attributes to Elixir map
@@ -545,7 +537,7 @@ fn encode_object_meta_with_attributes<'a>(
         map
     };
 
-    let map = if let Some(value) = attributes.get(&Attribute::ContentLanguage) {
+    if let Some(value) = attributes.get(&Attribute::ContentLanguage) {
         map.map_put(
             Atom::from_str(env, "content_language")
                 .unwrap()
@@ -555,9 +547,7 @@ fn encode_object_meta_with_attributes<'a>(
         .unwrap()
     } else {
         map
-    };
-
-    map
+    }
 }
 
 /// Upload an object to storage with attributes and optional tags
@@ -619,8 +609,7 @@ pub fn put_with_attributes<'a>(
         ..Default::default()
     };
 
-    // Note: Tags are not easily constructible in object_store 0.11.2
-    // The API accepts them, but we'll skip setting them for now
+    // Tags are accepted by the NIF API but are not currently forwarded.
 
     let payload = PutPayload::from(data.as_slice().to_vec());
 

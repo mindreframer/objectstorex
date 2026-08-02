@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Planned Features
+- Telemetry integration for observability
+- Metrics and instrumentation
+- Advanced retry strategies (circuit breaker, rate limiting)
+- Object versioning support across all providers
+- Server-side encryption configuration
+- Presigned URL generation
+- Object lifecycle management
+- Additional providers (Wasabi, Backblaze B2)
+
+## [0.2.0] - 2026-08-02
+
+### Changed
+
+- Upgraded the Rust `object_store` dependency from 0.11.2 to 0.14.1.
+- Updated range handling for the dependency's `u64` range API.
+- Modernized the native crate to Rust 1.91 and edition 2024, with CI and release builds pinned to that toolchain.
+- Enabled precompiled NIF matrix builds for pull requests that change native code.
+
 ## [0.1.0] - 2025-11-13
 
 ### Added
@@ -108,18 +129,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic GitHub Releases publishing on version tags
 - Checksum verification for downloaded binaries
 - Fallback to source compilation for unsupported platforms
-
-## [Unreleased]
-
-### Planned Features
-- Telemetry integration for observability
-- Metrics and instrumentation
-- Advanced retry strategies (circuit breaker, rate limiting)
-- Object versioning support across all providers
-- Server-side encryption configuration
-- Presigned URL generation
-- Object lifecycle management
-- Additional providers (Wasabi, Backblaze B2)
 
 ---
 

@@ -16,7 +16,7 @@ Add `objectstorex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:objectstorex, "~> 0.1.0"}
+    {:objectstorex, "~> 0.2.0"}
   ]
 end
 ```
@@ -435,7 +435,7 @@ config :objectstorex, :force_build, true
 - Try building from source as described above
 
 **Compilation errors when building from source:**
-- Verify Rust toolchain version: `rustc --version` (minimum: 1.86.0)
+- Verify Rust toolchain version: `rustc --version` (minimum: 1.91.0)
 - Update Rust: `rustup update`
 - Clean and rebuild: `mix deps.clean objectstorex && mix deps.compile objectstorex`
 

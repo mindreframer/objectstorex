@@ -265,7 +265,7 @@ defmodule OBX0054ACICDValidationTest do
 
       # Check for essential steps
       assert "actions/checkout@v4" in step_names, "Should checkout code"
-      assert "dtolnay/rust-toolchain@stable" in step_names, "Should install Rust"
+      assert "dtolnay/rust-toolchain@1.91.0" in step_names, "Should install Rust 1.91"
       assert "Extract version from mix.exs" in step_names, "Should extract version"
       assert "Add Rust target" in step_names, "Should add target"
       assert "Build NIF" in step_names, "Should build NIF"
