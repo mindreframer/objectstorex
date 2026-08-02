@@ -28,8 +28,8 @@ epiclead-config.json
 /priv/plts/
 /priv/native/
 
-# Precompiled NIF checksums (generated before hex publish)
-checksum-*.exs
+# Precompiled NIF checksums are release metadata and must be versioned.
+!checksum-Elixir.ObjectStoreX.Native.exs
 
 # Unpacked hex package directory (from mix hex.build --unpack)
 objectstorex-*/
