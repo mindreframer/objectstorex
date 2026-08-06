@@ -30,7 +30,7 @@ pub fn new_s3(
     }
 
     if let Some(ep) = endpoint {
-        builder = builder.with_endpoint(ep);
+        builder = builder.with_endpoint(ep).with_allow_http(true);
     }
 
     let store = builder

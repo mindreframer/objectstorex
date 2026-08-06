@@ -1,7 +1,7 @@
 defmodule ObjectStoreX.MixProject do
   use Mix.Project
 
-  @version "0.2.0"
+  @version "0.2.1"
   @source_url "https://github.com/mindreframer/objectstorex"
   @dev? String.ends_with?(@version, "-dev")
   @force_build? System.get_env("OBJECTSTOREX_BUILD") in ["1", "true"]

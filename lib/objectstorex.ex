@@ -24,7 +24,7 @@ defmodule ObjectStoreX do
 
       def deps do
         [
-          {:objectstorex, "~> 0.2.0"}
+          {:objectstorex, "~> 0.2.1"}
         ]
       end
 

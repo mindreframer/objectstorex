@@ -50,6 +50,19 @@ defmodule ObjectStoreXTest do
       assert is_reference(store)
     end
 
+    test "custom S3 endpoints accept HTTP for local-compatible services" do
+      assert {:ok, store} =
+               ObjectStoreX.new(:s3,
+                 bucket: "test-bucket",
+                 region: "us-east-1",
+                 access_key_id: "fake-key",
+                 secret_access_key: "fake-secret",
+                 endpoint: "http://127.0.0.1:9000"
+               )
+
+      assert is_reference(store)
+    end
+
     # For T2-T6, we'll use memory provider as a functional equivalent
     # since the operations are polymorphic across all providers
     setup do

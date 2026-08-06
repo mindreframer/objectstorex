@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Object lifecycle management
 - Additional providers (Wasabi, Backblaze B2)
 
+## [0.2.1] - 2026-08-06
+
+### Fixed
+
+- Enabled HTTP for custom S3-compatible endpoints, allowing local services such as MinIO and RustFS to work as documented.
+
 ## [0.2.0] - 2026-08-02
 
 ### Changed
