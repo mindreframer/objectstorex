@@ -306,7 +306,7 @@ export TEST_GCS_BUCKET="objectstorex-test"
 
 ## Getting Help
 
-- **Documentation**: Check the [guides](guides/)
+- **Documentation**: Start with the [getting started guide](guides/getting_started.md)
 - **Issues**: Search existing issues before creating new ones
 - **Discussions**: Use GitHub Discussions for questions
 
