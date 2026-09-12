@@ -1,10 +1,10 @@
 %{
-  "libobjectstorex-v0.2.1-nif-2.15-aarch64-apple-darwin.so.tar.gz" => "sha256:0d7365695574728eef793427cf427748a0613ac60ec57f20b3b2f4809da2a63e",
-  "libobjectstorex-v0.2.1-nif-2.15-aarch64-unknown-linux-gnu.so.tar.gz" => "sha256:04c54073166a8b8d223f9cb1204a85bd84d9eb3afaa3cf5d22a1f7e931bdcf45",
-  "libobjectstorex-v0.2.1-nif-2.15-aarch64-unknown-linux-musl.so.tar.gz" => "sha256:9c9f9c69e4b701123ee280eb0287dea3a2dc52e96185414b09493d0d964b3783",
-  "libobjectstorex-v0.2.1-nif-2.15-x86_64-apple-darwin.so.tar.gz" => "sha256:70d204944adb109ef187fd45b9c3e1563d698b339ea287c515eb0934709df079",
-  "libobjectstorex-v0.2.1-nif-2.15-x86_64-unknown-linux-gnu.so.tar.gz" => "sha256:09716e328f07e185f0d1f34b568b8fa876c9a595a436798a9751edfbbb8e322d",
-  "libobjectstorex-v0.2.1-nif-2.15-x86_64-unknown-linux-musl.so.tar.gz" => "sha256:4ce5ee8fbaf8addc6cb2cfe01db5b459f44c0bf571dda17a5bf976be2d80f625",
-  "objectstorex-v0.2.1-nif-2.15-x86_64-pc-windows-gnu.dll.tar.gz" => "sha256:25fb6525317d286a412a7a66f1f5dc0958ce0ff5cb3d255ca906b2bb9e0081f2",
-  "objectstorex-v0.2.1-nif-2.15-x86_64-pc-windows-msvc.dll.tar.gz" => "sha256:4695f5824bb5ccb74ee5b9dae48c66f08c1bffd518d4f7a0a0730f5febf6508e",
+  "libobjectstorex-v0.3.0-nif-2.15-aarch64-apple-darwin.so.tar.gz" => "sha256:36af4e6c06c7ab0b9c46be5c4234cebf45f6d935d364a4f013a66b66ad8622a7",
+  "libobjectstorex-v0.3.0-nif-2.15-aarch64-unknown-linux-gnu.so.tar.gz" => "sha256:80da1e4a6c5ee788d52a5e68c8d7ef1bcc8badbe76be68a335b742f477808077",
+  "libobjectstorex-v0.3.0-nif-2.15-aarch64-unknown-linux-musl.so.tar.gz" => "sha256:2ae9f10f2385232f18004bb9a8f497c9e565a76ecaca54f65d7d0bfe7ca647b1",
+  "libobjectstorex-v0.3.0-nif-2.15-x86_64-apple-darwin.so.tar.gz" => "sha256:94542152d456b7f8c0d587a66f351dde023a4349e7fddafdf21658acb5ba37ef",
+  "libobjectstorex-v0.3.0-nif-2.15-x86_64-unknown-linux-gnu.so.tar.gz" => "sha256:c3bbd5e63db84b42c1aaa0cbd8d533d04169118a110ccfbcf0d03fffba1a859c",
+  "libobjectstorex-v0.3.0-nif-2.15-x86_64-unknown-linux-musl.so.tar.gz" => "sha256:3117745ecf0f8ae3f6e677a6cb8670864739daff398fa636601b258162200ee1",
+  "objectstorex-v0.3.0-nif-2.15-x86_64-pc-windows-gnu.dll.tar.gz" => "sha256:fd67bc2820ed48874feac2dcc4078cc5792c322582734dbf65f0cc643cd636ee",
+  "objectstorex-v0.3.0-nif-2.15-x86_64-pc-windows-msvc.dll.tar.gz" => "sha256:006ec88e1716d8cba0a4de272f80f10484add91278b179c22fa8aa53110ac86f",
 }
