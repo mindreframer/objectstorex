@@ -154,6 +154,11 @@ defmodule ObjectStoreX do
           size: non_neg_integer(),
           etag: String.t() | nil
         }
+  @type delimiter_page :: %{
+          objects: [metadata()],
+          prefixes: [String.t()],
+          next_page_token: String.t() | nil
+        }
 
   @doc """
   Create a new storage provider.
@@ -746,5 +751,114 @@ defmodule ObjectStoreX do
     end
   rescue
     e -> {:error, Exception.message(e)}
+  end
+
+  @doc """
+  Lists one bounded page of immediate objects and common prefixes.
+
+  Unlike `list_with_delimiter/2`, this function limits each result to at most
+  `:max_keys` objects and prefixes combined and returns an opaque continuation
+  token. Pass a non-nil token back unchanged with the same store, prefix, and
+  maximum page size.
+
+  S3 (including Wasabi and other S3-compatible services), Azure, and GCS use
+  their provider-native paginated listing APIs. Memory and local stores preserve
+  the same public semantics with a deterministic compatibility pager that
+  materializes the complete immediate level internally.
+
+  Listing order for cloud providers is provider-defined. A page traversal is
+  not a snapshot; concurrent writes and deletes can affect later pages.
+
+  ## Options
+
+  * `:prefix` - `nil` or a binary path prefix (default: `nil`)
+  * `:max_keys` - combined object/prefix limit from 1 through 1,000
+    (default: `1_000`)
+  * `:page_token` - `nil` or a non-empty opaque token from the preceding page
+
+  Unknown and malformed options return `{:error, {:invalid_option, name}}`.
+  Malformed or incompatible memory/local tokens return
+  `{:error, :invalid_page_token}`.
+
+  ## Examples
+
+      {:ok, first} =
+        ObjectStoreX.list_with_delimiter_page(store,
+          prefix: "audio/",
+          max_keys: 100
+        )
+
+      {:ok, second} =
+        ObjectStoreX.list_with_delimiter_page(store,
+          prefix: "audio/",
+          max_keys: 100,
+          page_token: first.next_page_token
+        )
+  """
+  @spec list_with_delimiter_page(store(), keyword()) ::
+          {:ok, delimiter_page()} | {:error, term()}
+  def list_with_delimiter_page(store, opts \\ [])
+
+  def list_with_delimiter_page(store, opts) when is_list(opts) do
+    with :ok <- validate_delimiter_page_options(opts) do
+      prefix = Keyword.get(opts, :prefix)
+      max_keys = Keyword.get(opts, :max_keys, 1_000)
+      page_token = Keyword.get(opts, :page_token)
+
+      case Native.list_with_delimiter_page(store, prefix, max_keys, page_token) do
+        {objects, prefixes, next_page_token}
+        when is_list(objects) and is_list(prefixes) and
+               (is_binary(next_page_token) or is_nil(next_page_token)) ->
+          {:ok,
+           %{
+             objects: objects,
+             prefixes: prefixes,
+             next_page_token: next_page_token
+           }}
+
+        error ->
+          {:error, error}
+      end
+    end
+  rescue
+    e -> {:error, Exception.message(e)}
+  end
+
+  def list_with_delimiter_page(_store, _opts), do: {:error, {:invalid_option, :options}}
+
+  defp validate_delimiter_page_options(opts) do
+    if Keyword.keyword?(opts) do
+      validate_delimiter_page_keyword_options(opts)
+    else
+      {:error, {:invalid_option, :options}}
+    end
+  end
+
+  defp validate_delimiter_page_keyword_options(opts) do
+    case Enum.find(Keyword.keys(opts), &(&1 not in [:prefix, :max_keys, :page_token])) do
+      nil -> validate_delimiter_page_option_values(opts)
+      option -> {:error, {:invalid_option, option}}
+    end
+  end
+
+  defp validate_delimiter_page_option_values(opts) do
+    prefix = Keyword.get(opts, :prefix)
+    max_keys = Keyword.get(opts, :max_keys, 1_000)
+    page_token = Keyword.get(opts, :page_token)
+
+    cond do
+      not (is_nil(prefix) or (is_binary(prefix) and String.valid?(prefix))) ->
+        {:error, {:invalid_option, :prefix}}
+
+      not (is_integer(max_keys) and max_keys >= 1 and max_keys <= 1_000) ->
+        {:error, {:invalid_option, :max_keys}}
+
+      not (is_nil(page_token) or
+               (is_binary(page_token) and byte_size(page_token) > 0 and String.valid?(page_token))) ->
+        {:error, {:invalid_option, :page_token}}
+
+      true ->
+        :ok
+    end
   end
 end

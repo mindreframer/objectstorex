@@ -4,7 +4,6 @@ use object_store::{
     local::LocalFileSystem, memory::InMemory,
 };
 use rustler::{NifResult, ResourceArc};
-use std::sync::Arc;
 
 /// Create a new S3 object store
 #[rustler::nif]
@@ -37,7 +36,7 @@ pub fn new_s3(
         .build()
         .map_err(|e| rustler::Error::Term(Box::new(format!("S3 build error: {}", e))))?;
 
-    Ok(ResourceArc::new(StoreWrapper::new(Arc::new(store))))
+    Ok(ResourceArc::new(StoreWrapper::new_native(store)))
 }
 
 /// Create a new Azure Blob Storage object store
@@ -59,7 +58,7 @@ pub fn new_azure(
         .build()
         .map_err(|e| rustler::Error::Term(Box::new(format!("Azure build error: {}", e))))?;
 
-    Ok(ResourceArc::new(StoreWrapper::new(Arc::new(store))))
+    Ok(ResourceArc::new(StoreWrapper::new_native(store)))
 }
 
 /// Create a new Google Cloud Storage object store
@@ -78,7 +77,7 @@ pub fn new_gcs(
         .build()
         .map_err(|e| rustler::Error::Term(Box::new(format!("GCS build error: {}", e))))?;
 
-    Ok(ResourceArc::new(StoreWrapper::new(Arc::new(store))))
+    Ok(ResourceArc::new(StoreWrapper::new_native(store)))
 }
 
 /// Create a new local filesystem object store
@@ -87,12 +86,12 @@ pub fn new_local(path: String) -> NifResult<ResourceArc<StoreWrapper>> {
     let store = LocalFileSystem::new_with_prefix(path)
         .map_err(|e| rustler::Error::Term(Box::new(format!("Local FS error: {}", e))))?;
 
-    Ok(ResourceArc::new(StoreWrapper::new(Arc::new(store))))
+    Ok(ResourceArc::new(StoreWrapper::new_compatibility(store)))
 }
 
 /// Create a new in-memory object store
 #[rustler::nif]
 pub fn new_memory() -> NifResult<ResourceArc<StoreWrapper>> {
     let store = InMemory::new();
-    Ok(ResourceArc::new(StoreWrapper::new(Arc::new(store))))
+    Ok(ResourceArc::new(StoreWrapper::new_compatibility(store)))
 }

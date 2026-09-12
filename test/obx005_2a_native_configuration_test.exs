@@ -76,6 +76,8 @@ defmodule OBX005_2A_NativeConfigurationTest do
 
       assert :start_list_stream in function_names
       assert :list_with_delimiter in function_names
+      assert :list_with_delimiter_page in function_names
+      assert function_exported?(ObjectStoreX.Native, :list_with_delimiter_page, 4)
     end
   end
 

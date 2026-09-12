@@ -243,4 +243,208 @@ defmodule ObjectStoreX.ListTest do
              end)
     end
   end
+
+  describe "ROADMAP001: bounded delimiter pages" do
+    setup do
+      {:ok, store} = ObjectStoreX.new(:memory)
+
+      for path <- ["alpha.txt", "beta/one.txt", "delta.txt", "gamma/deep/two.txt"] do
+        assert :ok = ObjectStoreX.put(store, path, path)
+      end
+
+      {:ok, store: store}
+    end
+
+    test "returns a bounded map and terminates without a trailing empty page", %{store: store} do
+      assert {:ok,
+              %{
+                objects: [%{location: "alpha.txt"}],
+                prefixes: ["beta"],
+                next_page_token: token
+              }} = ObjectStoreX.list_with_delimiter_page(store, max_keys: 2)
+
+      assert is_binary(token) and token != ""
+
+      assert {:ok,
+              %{
+                objects: [%{location: "delta.txt"}],
+                prefixes: ["gamma"],
+                next_page_token: nil
+              }} =
+               ObjectStoreX.list_with_delimiter_page(store,
+                 max_keys: 2,
+                 page_token: token
+               )
+    end
+
+    test "uses documented defaults and supports empty prefixes", %{store: store} do
+      assert {:ok, %{objects: objects, prefixes: prefixes, next_page_token: nil}} =
+               ObjectStoreX.list_with_delimiter_page(store)
+
+      assert Enum.map(objects, & &1.location) == ["alpha.txt", "delta.txt"]
+      assert prefixes == ["beta", "gamma"]
+
+      assert {:ok, %{objects: [], prefixes: [], next_page_token: nil}} =
+               ObjectStoreX.list_with_delimiter_page(store, prefix: "missing/")
+    end
+
+    test "page size one traverses mixed objects and immediate prefixes exactly once", %{
+      store: store
+    } do
+      pages = collect_delimiter_pages(store, nil, 1)
+
+      assert Enum.all?(pages, fn page -> length(page.objects) + length(page.prefixes) <= 1 end)
+      assert List.last(pages).next_page_token == nil
+
+      entries =
+        Enum.flat_map(pages, fn page ->
+          Enum.map(page.objects, &{:object, &1.location}) ++
+            Enum.map(page.prefixes, &{:prefix, &1})
+        end)
+
+      assert entries == [
+               {:object, "alpha.txt"},
+               {:prefix, "beta"},
+               {:object, "delta.txt"},
+               {:prefix, "gamma"}
+             ]
+
+      assert length(entries) == length(Enum.uniq(entries))
+    end
+
+    test "a nested prefix only returns its immediate level", %{store: store} do
+      assert {:ok, %{objects: [%{location: "beta/one.txt"}], prefixes: []}} =
+               ObjectStoreX.list_with_delimiter_page(store, prefix: "beta/", max_keys: 3)
+
+      assert {:ok, %{objects: [], prefixes: ["gamma/deep"]}} =
+               ObjectStoreX.list_with_delimiter_page(store, prefix: "gamma/", max_keys: 3)
+    end
+
+    test "an exact boundary returns a terminal nil token" do
+      {:ok, store} = ObjectStoreX.new(:memory)
+      assert :ok = ObjectStoreX.put(store, "one", "1")
+      assert :ok = ObjectStoreX.put(store, "two", "2")
+
+      assert {:ok, %{objects: objects, prefixes: [], next_page_token: nil}} =
+               ObjectStoreX.list_with_delimiter_page(store, max_keys: 2)
+
+      assert Enum.map(objects, & &1.location) == ["one", "two"]
+    end
+
+    test "rejects malformed and unknown options before calling the NIF" do
+      invalid_options = [
+        {[unknown: true], :unknown},
+        {[prefix: 123], :prefix},
+        {[prefix: <<255>>], :prefix},
+        {[max_keys: 0], :max_keys},
+        {[max_keys: 1_001], :max_keys},
+        {[max_keys: 1.5], :max_keys},
+        {[page_token: ""], :page_token},
+        {[page_token: 42], :page_token},
+        {[page_token: <<255>>], :page_token}
+      ]
+
+      for {opts, option} <- invalid_options do
+        assert {:error, {:invalid_option, ^option}} =
+                 ObjectStoreX.list_with_delimiter_page(:not_a_store, opts)
+      end
+
+      assert {:error, {:invalid_option, :options}} =
+               ObjectStoreX.list_with_delimiter_page(:not_a_store, %{max_keys: 1})
+
+      assert {:error, {:invalid_option, :options}} =
+               ObjectStoreX.list_with_delimiter_page(:not_a_store, [{:max_keys, 1}, "bad"])
+    end
+
+    test "rejects malformed, altered, and request-mismatched fallback tokens", %{store: store} do
+      {:ok, %{next_page_token: token}} =
+        ObjectStoreX.list_with_delimiter_page(store, max_keys: 1)
+
+      assert {:error, :invalid_page_token} =
+               ObjectStoreX.list_with_delimiter_page(store,
+                 max_keys: 1,
+                 page_token: "not-a-token"
+               )
+
+      assert {:error, :invalid_page_token} =
+               ObjectStoreX.list_with_delimiter_page(store,
+                 max_keys: 2,
+                 page_token: token
+               )
+
+      assert {:error, :invalid_page_token} =
+               ObjectStoreX.list_with_delimiter_page(store,
+                 prefix: "beta/",
+                 max_keys: 1,
+                 page_token: token
+               )
+
+      altered = token <> "0"
+
+      assert {:error, :invalid_page_token} =
+               ObjectStoreX.list_with_delimiter_page(store,
+                 max_keys: 1,
+                 page_token: altered
+               )
+    end
+
+    test "local fallback has the same deterministic traversal" do
+      path =
+        Path.join(
+          System.tmp_dir!(),
+          "objectstorex-list-page-#{System.unique_integer([:positive, :monotonic])}"
+        )
+
+      File.mkdir_p!(path)
+      on_exit(fn -> File.rm_rf!(path) end)
+      {:ok, store} = ObjectStoreX.new(:local, path: path)
+
+      for object <- ["alpha.txt", "beta/one.txt", "delta.txt", "gamma/deep/two.txt"] do
+        assert :ok = ObjectStoreX.put(store, object, object)
+      end
+
+      entries =
+        store
+        |> collect_delimiter_pages(nil, 3)
+        |> Enum.flat_map(fn page ->
+          Enum.map(page.objects, &{:object, &1.location}) ++
+            Enum.map(page.prefixes, &{:prefix, &1})
+        end)
+
+      assert entries == [
+               {:object, "alpha.txt"},
+               {:object, "delta.txt"},
+               {:prefix, "beta"},
+               {:prefix, "gamma"}
+             ]
+
+      assert MapSet.size(MapSet.new(entries)) == 4
+    end
+
+    test "legacy complete and recursive streaming APIs keep their return shapes", %{store: store} do
+      assert {:ok, objects, prefixes} = ObjectStoreX.list_with_delimiter(store)
+      assert Enum.all?(objects, &is_map/1)
+      assert Enum.all?(prefixes, &is_binary/1)
+
+      streamed = ObjectStoreX.Stream.list_stream(store) |> Enum.to_list()
+      assert Enum.all?(streamed, &is_map/1)
+      assert length(streamed) == 4
+    end
+  end
+
+  defp collect_delimiter_pages(store, prefix, max_keys, token \\ nil, pages \\ []) do
+    assert {:ok, page} =
+             ObjectStoreX.list_with_delimiter_page(store,
+               prefix: prefix,
+               max_keys: max_keys,
+               page_token: token
+             )
+
+    pages = pages ++ [page]
+
+    case page.next_page_token do
+      nil -> pages
+      next_token -> collect_delimiter_pages(store, prefix, max_keys, next_token, pages)
+    end
+  end
 end

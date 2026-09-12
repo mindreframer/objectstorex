@@ -1,7 +1,7 @@
 use crate::RUNTIME;
 use crate::atoms;
 use crate::errors::map_error;
-use crate::store::StoreWrapper;
+use crate::store::{ListPageError, StoreWrapper};
 use crate::types::{AttributesNif, GetOptionsNif, PutModeNif};
 use chrono::{DateTime, TimeZone, Utc};
 use object_store::{
@@ -306,6 +306,41 @@ pub fn list_with_delimiter<'a>(
             Ok((objects, prefixes).encode(env))
         }
         Err(e) => Ok(map_error(e).to_term(env)),
+    }
+}
+
+/// List one bounded page of objects and common prefixes.
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn list_with_delimiter_page<'a>(
+    env: Env<'a>,
+    store: ResourceArc<StoreWrapper>,
+    prefix: Option<String>,
+    max_keys: usize,
+    page_token: Option<String>,
+) -> NifResult<Term<'a>> {
+    let result = RUNTIME.block_on(async {
+        store
+            .list_with_delimiter_page(prefix, max_keys, page_token)
+            .await
+    });
+
+    match result {
+        Ok(page) => {
+            let objects: Vec<Term> = page
+                .objects
+                .iter()
+                .map(|meta| encode_object_meta_for_list(env, meta))
+                .collect();
+            let prefixes: Vec<String> = page
+                .common_prefixes
+                .iter()
+                .map(ToString::to_string)
+                .collect();
+
+            Ok((objects, prefixes, page.next_page_token).encode(env))
+        }
+        Err(ListPageError::InvalidPageToken) => Ok(atoms::invalid_page_token().to_term(env)),
+        Err(ListPageError::Store(error)) => Ok(map_error(error).to_term(env)),
     }
 }
 

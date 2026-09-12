@@ -9,6 +9,7 @@ This guide covers detailed configuration options for all supported storage provi
 - [Google Cloud Storage](#google-cloud-storage)
 - [Local Filesystem](#local-filesystem)
 - [In-Memory Storage](#in-memory-storage)
+- [S3-Compatible Pagination Smoke Test](#s3-compatible-pagination-smoke-test)
 - [Credential Management](#credential-management)
 - [Configuration Best Practices](#configuration-best-practices)
 
@@ -59,6 +60,20 @@ Amazon S3 and S3-compatible services (MinIO, Cloudflare R2, DigitalOcean Spaces,
   endpoint: "http://localhost:9000",
   access_key_id: "minioadmin",
   secret_access_key: "minioadmin"
+)
+```
+
+#### Wasabi
+
+Wasabi uses the ordinary S3 provider and its native `ListObjectsV2` pagination:
+
+```elixir
+{:ok, store} = ObjectStoreX.new(:s3,
+  bucket: "my-bucket",
+  region: "eu-central-1",
+  endpoint: "https://s3.eu-central-1.wasabisys.com",
+  access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
+  secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY")
 )
 ```
 
@@ -265,6 +280,27 @@ In-memory storage for testing and development.
 - Data is lost when the process terminates
 - No persistence
 - Limited by available RAM
+
+## S3-Compatible Pagination Smoke Test
+
+The paginated delimiter integration test is optional and tagged `:cloud`. It is
+excluded from the credential-free test gate. To run it intentionally against S3,
+Wasabi, MinIO, or another compatible endpoint, set:
+
+```bash
+export AWS_ACCESS_KEY_ID="..."
+export AWS_SECRET_ACCESS_KEY="..."
+export TEST_S3_BUCKET="objectstorex-test"
+export TEST_S3_REGION="eu-central-1"       # optional; defaults to AWS_REGION or us-east-1
+export TEST_S3_ENDPOINT="https://s3.eu-central-1.wasabisys.com" # optional
+
+OBJECTSTOREX_BUILD=1 mix test test/integration/paginated_list_cloud_test.exs \
+  --include cloud
+```
+
+The test writes beneath a unique temporary prefix and cleans up its objects. It
+never prints credentials or continuation-token values. Leave
+`TEST_S3_ENDPOINT` unset for Amazon S3.
 
 ## Credential Management
 

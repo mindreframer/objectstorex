@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `ObjectStoreX.list_with_delimiter_page/2` for bounded, resumable pages of immediate objects and common prefixes.
+- S3 (including Wasabi and other compatible endpoints), Azure, and GCS use provider-native pagination. Memory and local stores use a deterministic compatibility pager that materializes the complete immediate level.
+
 ### Planned Features
 - Telemetry integration for observability
 - Metrics and instrumentation

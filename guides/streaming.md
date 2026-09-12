@@ -7,6 +7,7 @@ This guide covers efficient handling of large files using ObjectStoreX streaming
 - [Why Streaming?](#why-streaming)
 - [Streaming Downloads](#streaming-downloads)
 - [Streaming Uploads](#streaming-uploads)
+- [Listing APIs](#listing-apis)
 - [Streaming Lists](#streaming-lists)
 - [Range Reads](#range-reads)
 - [Best Practices](#best-practices)
@@ -174,9 +175,49 @@ case ObjectStoreX.Stream.upload(stream, store, "file.bin") do
 end
 ```
 
+## Listing APIs
+
+ObjectStoreX offers three complementary listing contracts:
+
+| API | Scope | Result behavior |
+|---|---|---|
+| `ObjectStoreX.Stream.list_stream/2` | Recursive objects below a prefix | Lazy Elixir stream |
+| `ObjectStoreX.list_with_delimiter/2` | Immediate objects and virtual folders | Complete level in one return value |
+| `ObjectStoreX.list_with_delimiter_page/2` | Immediate objects and virtual folders | One bounded, resumable page |
+
+Choose bounded delimiter pages for paginated APIs and folder browsers. S3
+(including Wasabi), Azure, and GCS issue one provider-native page request per
+call. Memory and local stores provide the same result semantics by materializing
+and deterministically slicing the complete immediate level.
+
+```elixir
+{:ok, page} =
+  ObjectStoreX.list_with_delimiter_page(store,
+    prefix: "uploads/",
+    max_keys: 100
+  )
+
+case page.next_page_token do
+  nil -> :complete
+  token ->
+    ObjectStoreX.list_with_delimiter_page(store,
+      prefix: "uploads/",
+      max_keys: 100,
+      page_token: token
+    )
+end
+```
+
+The limit counts objects and prefixes together. Treat tokens as opaque and reuse
+them unchanged with the same store, prefix, and page size. Native cloud ordering
+is provider-defined, and listings are not snapshots: concurrent mutation can
+change later pages.
+
 ## Streaming Lists
 
-List large numbers of objects efficiently with automatic pagination.
+List large numbers of recursive objects efficiently with automatic pagination.
+Unlike delimiter listings, this API emits objects from nested paths and does not
+return virtual folder prefixes.
 
 ### Basic List Stream
 

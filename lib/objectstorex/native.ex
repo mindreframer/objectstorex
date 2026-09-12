@@ -66,4 +66,7 @@ defmodule ObjectStoreX.Native do
   # List operations
   def start_list_stream(_store, _prefix, _receiver_pid), do: :erlang.nif_error(:nif_not_loaded)
   def list_with_delimiter(_store, _prefix), do: :erlang.nif_error(:nif_not_loaded)
+
+  def list_with_delimiter_page(_store, _prefix, _max_keys, _page_token),
+    do: :erlang.nif_error(:nif_not_loaded)
 end

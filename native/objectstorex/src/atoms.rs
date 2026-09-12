@@ -8,6 +8,7 @@ rustler::atoms! {
     not_modified,
     not_supported,
     permission_denied,
+    invalid_page_token,
     // Streaming atoms
     chunk,
     done,

@@ -1,6 +1,6 @@
 # ROADMAP001 — Add bounded delimiter-aware listing pages
 
-- **Status:** Accepted — implementation not started
+- **Status:** Complete
 - **Created:** 2026-09-12
 - **Baseline commit:** `a8c5904`
 - **Scope:** Expose bounded, resumable folder listings through ObjectStoreX without replacing the existing complete or streaming list APIs
@@ -82,17 +82,17 @@ Detailed files:
 
 ## Definition of complete
 
-- [ ] `list_with_delimiter_page/2` has a documented, typed, backwards-compatible Elixir contract.
-- [ ] S3/Wasabi, Azure, and GCS use `PaginatedListStore` with native `max_keys` and page tokens.
-- [ ] Memory and local providers have deterministic compatibility pagination with the documented materialization caveat.
-- [ ] Mixed object/prefix pages are bounded by one combined `max_keys` limit and terminate correctly.
-- [ ] Invalid options/tokens and provider failures return stable errors without leaking sensitive provider context.
-- [ ] Existing complete delimiter listing and recursive streaming listing behavior remain unchanged.
-- [ ] Credential-free Rust and Elixir coverage passes; optional S3-compatible coverage is documented and safe.
-- [ ] README, ExDoc guides, and changelog explain provider support, Wasabi compatibility, token rules, and consistency limitations.
-- [ ] Source/release builds and Hex package-content checks pass without relying on an old precompiled NIF.
-- [ ] `bin/qa_check.sh` and the complete explicit quality gate pass.
-- [ ] EPIC001 evidence is recorded and committed with `[Listing] Add paginated delimiter pages`.
+- [x] `list_with_delimiter_page/2` has a documented, typed, backwards-compatible Elixir contract.
+- [x] S3/Wasabi, Azure, and GCS use `PaginatedListStore` with native `max_keys` and page tokens.
+- [x] Memory and local providers have deterministic compatibility pagination with the documented materialization caveat.
+- [x] Mixed object/prefix pages are bounded by one combined `max_keys` limit and terminate correctly.
+- [x] Invalid options/tokens and provider failures return stable errors without leaking sensitive provider context.
+- [x] Existing complete delimiter listing and recursive streaming listing behavior remain unchanged.
+- [x] Credential-free Rust and Elixir coverage passes; optional S3-compatible coverage is documented and safe.
+- [x] README, ExDoc guides, and changelog explain provider support, Wasabi compatibility, token rules, and consistency limitations.
+- [x] Source/release builds and Hex package-content checks pass without relying on an old precompiled NIF.
+- [x] `bin/qa_check.sh` and the complete explicit quality gate pass.
+- [x] EPIC001 evidence is recorded and committed with `[Listing] Add paginated delimiter pages`.
 
 ## Out of scope
 

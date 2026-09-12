@@ -113,7 +113,47 @@ MinIO is perfect for local development and testing with S3-compatible APIs:
 - **Performance**: High-performance Rust NIFs with async I/O
 - **Streaming**: Support for large files with streaming uploads/downloads
 - **Bulk Operations**: Efficient batch operations for multiple objects
+- **Bounded Folder Listings**: Resumable pages of immediate objects and virtual folders
 - **Use Case Examples**: Distributed locks, optimistic counters, HTTP-style caching
+
+## Bounded Folder Listings
+
+Use `list_with_delimiter_page/2` when an API or UI needs one bounded page of a
+folder-like listing instead of every result at once:
+
+```elixir
+{:ok, first_page} =
+  ObjectStoreX.list_with_delimiter_page(store,
+    prefix: "audio/",
+    max_keys: 100
+  )
+
+# first_page.objects
+# first_page.prefixes
+
+{:ok, next_page} =
+  ObjectStoreX.list_with_delimiter_page(store,
+    prefix: "audio/",
+    max_keys: 100,
+    page_token: first_page.next_page_token
+  )
+```
+
+`max_keys` limits objects and common prefixes together. A terminal page has a
+`nil` token. Tokens are opaque and must be returned unchanged with the same
+store, prefix, and page size. Listings are not snapshots, so concurrent object
+changes can affect subsequent pages. Native cloud ordering is provider-defined.
+
+| Provider | Page implementation |
+|---|---|
+| Amazon S3, Wasabi, and other S3-compatible services | Native `ListObjectsV2` pagination |
+| Azure Blob Storage | Native provider pagination |
+| Google Cloud Storage | Native provider pagination |
+| Local filesystem | Deterministic compatibility pager; materializes the immediate level |
+| In-memory | Deterministic compatibility pager; materializes the immediate level |
+
+Use `list_with_delimiter/2` when the complete immediate folder level is wanted,
+or `ObjectStoreX.Stream.list_stream/2` for a lazy recursive object listing.
 
 ## Advanced Features
 
