@@ -146,8 +146,12 @@ defmodule OBX0053ARustConfigurationTest do
       {:ok, content} = File.read(@cargo_toml_path)
 
       # Check basic package info
+      expected_version = Mix.Project.config()[:version]
       assert content =~ ~r/name\s*=\s*"objectstorex"/, "Cargo.toml missing package name"
-      assert content =~ ~r/version\s*=\s*"0\.2\.1"/, "Cargo.toml missing package version"
+
+      assert content =~ ~s(version = "#{expected_version}"),
+             "Cargo.toml package version should match mix.exs"
+
       assert content =~ ~r/edition\s*=\s*"2024"/, "Cargo.toml missing edition = \"2024\""
     end
 

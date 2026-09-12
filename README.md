@@ -17,7 +17,7 @@ Add `objectstorex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:objectstorex, "~> 0.2.1"}
+    {:objectstorex, "~> 0.3.0"}
   ]
 end
 ```
